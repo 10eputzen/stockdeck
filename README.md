@@ -4,7 +4,7 @@ A self-hosted watchlist and portfolio tracker as an installable web app (PWA): l
 
 ![Stockdeck watchlist (demo data)](docs/screenshot.png)
 
-The UI is in German.
+The UI is available in English and German (browser language by default, switchable in the account settings). Translations live in `src/locales/*.json`; adding a language means adding one file.
 
 **Stack:** React 19 + TypeScript (Vite), PWA · Supabase (Postgres with Row Level Security, Google sign-in, Edge Functions, pg_cron) · any static host (Cloudflare Pages by default) · quotes from [Finnhub](https://finnhub.io), charts and non-US symbols via Yahoo chart data.
 
