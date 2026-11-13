@@ -7,6 +7,7 @@ import { getQuotes } from "../_shared/finnhub.ts";
 import { getFx } from "../_shared/portfolio.ts";
 import { holdings, valuate, type Tx } from "../_shared/positions.ts";
 import { isAllowedOrigin } from "../_shared/cors.ts";
+import { asLang, fmt, TEXTS, type Lang } from "./texts.ts";
 
 
 type Rule = {
@@ -26,9 +27,6 @@ webpush.setVapidDetails(
   Deno.env.get("VAPID_PRIVATE_KEY")!,
 );
 
-const pct = (n: number) => `${n >= 0 ? "+" : "−"}${Math.abs(n).toLocaleString("de-DE", { maximumFractionDigits: 1 })} %`;
-const num = (n: number, cur?: string | null) =>
-  `${n.toLocaleString("de-DE", { maximumFractionDigits: n < 10 ? 3 : 2 })}${cur ? ` ${cur}` : ""}`;
 
 /** Berliner Datum und ob gerade gehandelt wird (Mo–Fr 8:00–22:15, deckt Xetra und US-Börsen ab). */
 function berlinNow() {
@@ -92,23 +90,30 @@ async function run(admin: SupabaseClient) {
   const list = [...symbols];
   for (const q of await getQuotes(admin, list)) quotes[q.symbol] = q;
 
+  // Sprache je Nutzer: die des zuletzt angemeldeten Geräts
+  const langOf = new Map<string, Lang>();
+  const { data: subLangs } = await admin.from("push_subscriptions").select("user_id, lang").order("created_at", { ascending: true });
+  for (const s of subLangs ?? []) langOf.set(s.user_id, asLang(s.lang));
+
   const events: (NewEvent & { push: Push })[] = [];
   const oneShot: string[] = [];
   for (const r of all) {
     const thr = Number(r.threshold);
+    const lang = langOf.get(r.user_id) ?? "de";
+    const tx = TEXTS[lang];
+    const { pct, num, date } = fmt(lang);
     if (r.symbol) {
       const q = quotes[r.symbol];
       if (!q || !(q.price > 0)) continue;
       const url = `/#/s/${encodeURIComponent(r.symbol)}`;
       if ((r.kind === "price_above" && q.price >= thr) || (r.kind === "price_below" && q.price <= thr)) {
-        const word = r.kind === "price_above" ? "über" : "unter";
-        const title = `${r.symbol} ${word} ${num(thr, q.currency)}`;
-        const body = `Kurs jetzt ${num(q.price, q.currency)} (${pct(q.change_pct)} heute).`;
+        const title = tx.priceTitle(r.symbol, r.kind === "price_above", num(thr, q.currency));
+        const body = tx.priceBody(num(q.price, q.currency), pct(q.change_pct));
         events.push({ user_id: r.user_id, rule_id: r.id, kind: r.kind, symbol: r.symbol, title, body, dedupe_key: `rule:${r.id}:${today}`, push: { title, body, url, tag: r.id } });
         oneShot.push(r.id);
       } else if (r.kind === "change_pct_day" && Math.abs(q.change_pct) >= thr) {
-        const title = `${r.symbol} ${pct(q.change_pct)} heute`;
-        const body = `Kurs ${num(q.price, q.currency)}, Alarm ab ±${num(thr)} %.`;
+        const title = tx.dayTitle(r.symbol, pct(q.change_pct));
+        const body = tx.dayBody(num(q.price, q.currency), num(thr));
         events.push({ user_id: r.user_id, rule_id: r.id, kind: r.kind, symbol: r.symbol, title, body, dedupe_key: `rule:${r.id}:${today}`, push: { title, body, url, tag: r.id } });
       }
       continue;
@@ -130,12 +135,12 @@ async function run(admin: SupabaseClient) {
       const url = `/#/s/${encodeURIComponent(p.symbol)}`;
       const key = `${r.kind}:${p.portfolio_id}:${p.symbol}:${p.opened}`;
       if (r.kind === "finanzplan_gain" && g >= thr && p.opened >= since) {
-        const title = `${name} ${pct(g)} seit Kauf – Hälfte verkaufen?`;
-        const body = `Finanzplan: +${num(thr)} % binnen ${r.params?.weeks ?? 4} Wochen erreicht (gekauft ${p.opened.split("-").reverse().join(".")}). Nur ein Hinweis.`;
+        const title = tx.gainTitle(name, pct(g));
+        const body = tx.gainBody(num(thr), r.params?.weeks ?? 4, date(p.opened));
         events.push({ user_id: r.user_id, rule_id: r.id, kind: r.kind, symbol: p.symbol, title, body, dedupe_key: key, push: { title, body, url, tag: key } });
       } else if (r.kind === "finanzplan_stop" && g <= -thr) {
-        const title = `${name}: Stop erreicht (${pct(g)})`;
-        const body = `Finanzplan: −${num(thr)} % unter Einstand. Nur ein Hinweis, es wird nichts verkauft.`;
+        const title = tx.stopTitle(name, pct(g));
+        const body = tx.stopBody(num(thr));
         events.push({ user_id: r.user_id, rule_id: r.id, kind: r.kind, symbol: p.symbol, title, body, dedupe_key: key, push: { title, body, url, tag: key } });
       }
     }
@@ -192,9 +197,10 @@ Deno.serve(async (req) => {
     const { data: allowed } = await userClient.rpc("is_allowed");
     const { data: user } = await userClient.auth.getUser();
     if (allowed !== true || !user.user) return json({ error: "forbidden" }, 403);
+    const tx = TEXTS[asLang(body.lang)];
     const sent = await sendToUser(admin, user.user.id, {
-      title: "Stockdeck-Test",
-      body: "Push funktioniert. Alarme kommen auch, wenn die App zu ist.",
+      title: tx.testTitle,
+      body: tx.testBody,
       url: "/#/konto",
       tag: "test",
     });
