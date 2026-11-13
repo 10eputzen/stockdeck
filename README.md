@@ -1,5 +1,11 @@
 # Stockdeck
 
+[![CI](https://github.com/10eputzen/stockdeck/actions/workflows/ci.yml/badge.svg?event=pull_request)](https://github.com/10eputzen/stockdeck/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)
+![React 19](https://img.shields.io/badge/React-19-61dafb.svg)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Edge%20Functions-3ecf8e.svg)
+
 A self-hosted watchlist and portfolio tracker as an installable web app (PWA): live quotes, charts, news, per-stock signals, portfolios with CSV import, web push alerts, shared watchlists and an MCP server for AI assistants.
 
 ![Stockdeck watchlist (demo data)](docs/screenshot.png)
@@ -16,6 +22,64 @@ The UI is available in English and German (browser language by default, switchab
 - Web push alerts: price above/below, daily move, take-profit and stop rules
 - Shared watchlists: invite people by email, everyone can edit
 - MCP server so Claude and other assistants can read and edit the watchlist and portfolio
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Client
+    PWA["React PWA<br/>(static, Cloudflare Pages)"]
+    SW["Service worker<br/>offline cache + web push"]
+  end
+  subgraph Supabase
+    AUTH["Auth<br/>Google sign-in, OAuth 2.1 server"]
+    DB[("Postgres<br/>Row Level Security")]
+    FN_M["Edge Function market<br/>quotes, charts, news, signals"]
+    FN_A["Edge Function alerts<br/>rules → web push"]
+    FN_MCP["Edge Function mcp<br/>MCP server"]
+    CRON["pg_cron<br/>every 15 min"]
+  end
+  EXT["Finnhub / Yahoo"]
+  AI["Claude & other<br/>MCP clients"]
+
+  PWA -- "supabase-js (user JWT)" --> DB
+  PWA --> AUTH
+  PWA -- invoke --> FN_M
+  FN_M --> EXT
+  FN_M -- "quote cache" --> DB
+  CRON --> FN_A
+  FN_A --> DB
+  FN_A -- "Web Push (VAPID)" --> SW
+  AI -- "OAuth or API key" --> FN_MCP
+  FN_MCP -- "queries scoped to the user" --> DB
+```
+
+**Design decisions**
+
+- **No custom backend.** The frontend talks to Postgres directly; every table is protected by Row Level Security, so the database itself enforces “users only see their own data”. Fewer moving parts, nothing to keep in sync between an API layer and the schema.
+- **Edge Functions only where secrets or third parties are involved.** Market data keys never reach the browser; quotes are cached in Postgres for 60 seconds so many users share one upstream call.
+- **The MCP server resolves the caller first, then scopes every query.** OAuth tokens and API keys both map to a user id, only allowlisted accounts get through, and every read or write is filtered by that id.
+- **Static PWA.** Installable on phone and desktop, works on any static host, push notifications without an app store.
+- **Invite-only sign-up.** A `before_user_created` auth hook rejects accounts that are not on the allowlist, so a public deployment doesn't turn into an open service.
+
+## Highlights
+
+### MCP server: your watchlist as an AI tool
+
+`supabase/functions/mcp/` implements the [Model Context Protocol](https://modelcontextprotocol.io) (Streamable HTTP, stateless) with 13 tools: read and edit the watchlist and groups, search symbols, get quotes, charts, news and signals, list the portfolio and record transactions.
+
+- **Auth:** OAuth 2.1 with dynamic client registration (Supabase Auth acts as the authorization server, the app hosts the consent page), so claude.ai can connect with just the URL. Scripts and Claude Code can use an API key instead; only its SHA-256 hash is stored.
+- **Only your own data:** the caller is resolved to a user id up front, and every query is filtered by it. Accounts not on the allowlist are rejected.
+
+Example in Claude: *“Which stocks in my Tech group dropped today, and what do analysts say about them?”* Claude calls `list_watchlist`, `get_quotes` and `get_signals` and answers from your live data.
+
+### Shared watchlists with a small permission model
+
+![Sharing a watchlist (demo data)](docs/shared-list.png)
+
+- The owner invites people by email (Google account). Members can add, remove and reorder stocks; only the owner can rename, invite, remove members or stop sharing.
+- Members never see the owner's portfolio or other groups. Shared lists live in their own tables with their own policies, so the private watchlist rules stay untouched.
+- Invitations extend the sign-up allowlist automatically; limits (20 members, 200 stocks per list) are enforced in the database, not just in the UI.
 
 ## Project layout
 
@@ -63,7 +127,7 @@ You need Node 22+, the [Supabase CLI](https://supabase.com/docs/guides/cli), a S
 npm run lint && npx tsc -b && npm test && npm run build
 ```
 
-There is no CI; run the checks locally before pushing.
+CI runs lint, type check and tests on pull requests (`.github/workflows/ci.yml`). Run the same checks locally before pushing. Changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
 ## Deploy
 
