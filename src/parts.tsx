@@ -6,6 +6,9 @@ import type { Quote, WatchItem } from './lib/supabase'
 import type { Signal } from './lib/signals'
 import { dirOf, money, moneySigned, pct, time } from './lib/format'
 
+/** Tagesspanne ohne Währungszeichen (steht schon beim Kurs), damit sie in die Spalte passt. */
+const spanNum = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
 export const Sk = ({ w }: { w: number | string }) => <span className="sk sk-text" style={{ width: w }} />
 
 /** Zellen einer Zeile; dieselbe Funktion für echte Zeilen und Platzhalter, damit nichts springt. */
@@ -72,8 +75,8 @@ function Cells({
       <span className={`cell num ${dirOf(q?.change)}`}>{q ? pct.format(q.change_pct / 100) : <Sk w={52} />}</span>
     ),
     range: cols.range && (
-      <span className="cell num muted hide-sm">
-        {q ? `${money(q.currency).format(q.day_low)} – ${money(q.currency).format(q.day_high)}` : <Sk w={120} />}
+      <span className="cell num muted hide-sm ellipsis" title={q ? `${spanNum.format(q.day_low)} – ${spanNum.format(q.day_high)}` : undefined}>
+        {q ? `${spanNum.format(q.day_low)} – ${spanNum.format(q.day_high)}` : <Sk w={120} />}
       </span>
     ),
     analyst: cols.analyst && (
