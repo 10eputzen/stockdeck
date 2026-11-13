@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { useSortable } from '@dnd-kit/sortable'
 import type { Group } from '../lib/supabase'
 import { ShareIcon } from './SharedSection'
@@ -25,6 +26,7 @@ export function GroupHeader({
   onShare?: () => void
   sortable: Pick<ReturnType<typeof useSortable>, 'setActivatorNodeRef' | 'attributes' | 'listeners'>
 }) {
+  const { t } = useTranslation()
   const { setActivatorNodeRef, attributes, listeners } = sortable
   return (
     <div className="grouphead">
@@ -33,15 +35,15 @@ export function GroupHeader({
         ref={setActivatorNodeRef}
         {...attributes}
         {...listeners}
-        aria-label={`Gruppe ${group.name} verschieben`}
-        title="Gruppe verschieben"
+        aria-label={t('watchlist.moveGroupAria', { name: group.name })}
+        title={t('watchlist.moveGroup')}
       >
         ⠿
       </button>
       <button
         className="ghost icon chevron"
         aria-expanded={!group.collapsed}
-        aria-label={group.collapsed ? `${group.name} aufklappen` : `${group.name} einklappen`}
+        aria-label={group.collapsed ? t('watchlist.expandGroup', { name: group.name }) : t('watchlist.collapseGroup', { name: group.name })}
         onClick={onToggle}
       >
         <span className={group.collapsed ? 'rot' : ''}>▾</span>
@@ -56,14 +58,14 @@ export function GroupHeader({
       <span className="muted small-count">{count}</span>
       <span className="grow" />
       {onShare && (
-        <button className="ghost icon gh-tool" aria-label={`${group.name} teilen`} title="Gruppe teilen" onClick={onShare}>
+        <button className="ghost icon gh-tool" aria-label={t('watchlist.shareGroupAria', { name: group.name })} title={t('watchlist.shareGroupTitle')} onClick={onShare}>
           <ShareIcon />
         </button>
       )}
-      <button className="ghost icon gh-tool" aria-label={`${group.name} umbenennen`} title="Umbenennen" onClick={onStartEdit}>
+      <button className="ghost icon gh-tool" aria-label={t('watchlist.renameItemAria', { name: group.name })} title={t('watchlist.rename')} onClick={onStartEdit}>
         ✎
       </button>
-      <button className="ghost icon danger gh-tool" aria-label={`${group.name} löschen`} title="Gruppe löschen" onClick={onDelete}>
+      <button className="ghost icon danger gh-tool" aria-label={t('watchlist.deleteGroupAria', { name: group.name })} title={t('watchlist.deleteGroupTitle')} onClick={onDelete}>
         ×
       </button>
     </div>
@@ -71,6 +73,7 @@ export function GroupHeader({
 }
 
 export function NameEditor({ initial, onDone }: { initial: string; onDone: (name: string) => void }) {
+  const { t } = useTranslation()
   const [draft, setDraft] = useState(initial)
   const commit = () => {
     const name = draft.trim()
@@ -81,7 +84,7 @@ export function NameEditor({ initial, onDone }: { initial: string; onDone: (name
       className="groupname-input"
       value={draft}
       maxLength={60}
-      aria-label="Gruppenname"
+      aria-label={t('watchlist.groupName')}
       onChange={(e) => setDraft(e.target.value)}
       onFocus={(e) => e.target.select()}
       onBlur={commit}

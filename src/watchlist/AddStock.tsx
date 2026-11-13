@@ -3,6 +3,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import {
   searchSymbols,
   type SearchResult,
@@ -20,6 +21,7 @@ export function AddStock({
   autoFocus?: boolean;
   inline?: boolean;
 }) {
+  const { t } = useTranslation();
   const [q, setQ] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const timer = useRef<number | undefined>(undefined);
@@ -39,10 +41,10 @@ export function AddStock({
     <div className={`add ${inline ? "inline" : ""}`}>
       <input
         type="search"
-        placeholder="Aktie suchen, z. B. AAPL"
+        placeholder={t("watchlist.searchPlaceholder")}
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        aria-label="Aktie suchen"
+        aria-label={t("watchlist.searchLabel")}
         autoFocus={autoFocus}
         enterKeyHint="search"
       />
@@ -61,7 +63,7 @@ export function AddStock({
                 <span className="sym">{r.symbol}</span>
                 <span className="muted ellipsis">{r.name}</span>
                 {existing.includes(r.symbol) && (
-                  <span className="muted small inlist">auf der Liste</span>
+                  <span className="muted small inlist">{t("watchlist.inList")}</span>
                 )}
               </button>
             </li>

@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import type { TxType } from './supabase'
 
 /** Eine Zeile aus der CSV, bereit zum Anlegen (Symbol ggf. erst nach ISIN-Auflösung). */
@@ -153,23 +154,23 @@ export function parseCsv(text: string): ParseResult {
     const rawType = get(c.type).toLowerCase().replace(/[\s-]/g, '')
     const type = TYPE_MAP[rawType]
     if (type === null) {
-      skipped.push({ line, reason: `Bargeld (${get(c.type)})` })
+      skipped.push({ line, reason: t('common.csvSkipCash', { type: get(c.type) }) })
       continue
     }
     if (!type) {
-      skipped.push({ line, reason: `unbekannter Typ „${get(c.type)}“` })
+      skipped.push({ line, reason: t('common.csvSkipUnknownType', { type: get(c.type) }) })
       continue
     }
     const date = parseDate(get(c.date))
     if (!date) {
-      skipped.push({ line, reason: 'Datum fehlt' })
+      skipped.push({ line, reason: t('common.csvSkipMissingDate') })
       continue
     }
     const ident = (get(c.isin) || get(c.ident) || get(c.symbol)).trim().toUpperCase()
     const isin = ISIN_RE.test(ident) ? ident : null
     const symbol = !isin && ident ? ident : get(c.symbol) && !ISIN_RE.test(get(c.symbol).toUpperCase()) ? get(c.symbol).toUpperCase() : null
     if (!isin && !symbol) {
-      skipped.push({ line, reason: 'ISIN oder Symbol fehlt' })
+      skipped.push({ line, reason: t('common.csvSkipMissingIdent') })
       continue
     }
     let quantity = Math.abs(parseNum(get(c.shares)))
@@ -184,7 +185,7 @@ export function parseCsv(text: string): ParseResult {
     const fees = Math.abs(parseNum(get(c.fee)))
     const taxes = parseNum(get(c.tax))
     if ([quantity, price, fees, taxes].some((n) => Number.isNaN(n))) {
-      skipped.push({ line, reason: 'Zahl nicht lesbar' })
+      skipped.push({ line, reason: t('common.csvSkipInvalidNumber') })
       continue
     }
     const currency = (get(c.currency) || 'EUR').toUpperCase()

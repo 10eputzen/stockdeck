@@ -1,5 +1,6 @@
 import { LOCALE } from './i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { parseNum } from './lib/csv'
 import {
   disablePush,
@@ -26,6 +27,7 @@ function ruleText(r: AlertRule) {
 
 /** Push-Schalter, Finanzplan-Regeln, Alarmliste und letzte Auslösungen (Konto-Seite). */
 export function AlertsSection({ onToast, onOpen }: { onToast: (t: string) => void; onOpen: (symbol: string) => void }) {
+  const { t } = useTranslation()
   const [push, setPush] = useState<PushState | null>(null)
   const [busy, setBusy] = useState(false)
   const [rules, setRules] = useState<AlertRule[]>([])
@@ -52,7 +54,7 @@ export function AlertsSection({ onToast, onOpen }: { onToast: (t: string) => voi
       else await enablePush()
       setPush(await pushState())
     } catch (e) {
-      onToast(e instanceof Error ? e.message : 'Push konnte nicht eingeschaltet werden.')
+      onToast(e instanceof Error ? e.message : t('detail.pushEnableError'))
     }
     setBusy(false)
   }
@@ -61,16 +63,16 @@ export function AlertsSection({ onToast, onOpen }: { onToast: (t: string) => voi
     setBusy(true)
     try {
       const n = await sendTestPush()
-      onToast(n ? `Testnachricht an ${n} Gerät${n === 1 ? '' : 'e'} geschickt.` : 'Kein Gerät angemeldet.')
+      onToast(n ? t('detail.testPushSent', { count: n }) : t('detail.noDeviceSubscribed'))
     } catch {
-      onToast('Test fehlgeschlagen.')
+      onToast(t('detail.testPushFailed'))
     }
     setBusy(false)
   }
 
   async function update(r: AlertRule, patch: Partial<AlertRule>) {
     const { error } = await supabase.from('alert_rules').update(patch).eq('id', r.id)
-    if (error) onToast('Speichern fehlgeschlagen.')
+    if (error) onToast(t('detail.saveFailed'))
     load()
   }
 
@@ -84,25 +86,24 @@ export function AlertsSection({ onToast, onOpen }: { onToast: (t: string) => voi
 
   return (
     <>
-      <h2 className="mh2">Benachrichtigungen</h2>
+      <h2 className="mh2">{t('detail.notifications')}</h2>
       <div className="mcard">
         {push === 'ios-browser' ? (
           <p className="mnote">
-            Auf dem iPhone kommen Push-Nachrichten nur aus der App auf dem Home-Bildschirm: In Safari „Teilen“ → „Zum Home-Bildschirm“ wählen
-            und Stockdeck von dort öffnen.
+            {t('detail.pushIosHint')}
           </p>
         ) : push === 'unsupported' ? (
-          <p className="mnote">Dieser Browser unterstützt keine Push-Nachrichten.</p>
+          <p className="mnote">{t('detail.pushUnsupported')}</p>
         ) : push === 'denied' ? (
-          <p className="mnote">Benachrichtigungen sind für Stockdeck blockiert. Bitte in den Browser-Einstellungen erlauben.</p>
+          <p className="mnote">{t('detail.pushDenied')}</p>
         ) : (
           <>
             <button className="mitem" onClick={toggle} disabled={busy || push == null}>
-              {push === 'on' ? 'Push auf diesem Gerät ausschalten' : 'Push auf diesem Gerät einschalten'}
+              {push === 'on' ? t('detail.pushDisableDevice') : t('detail.pushEnableDevice')}
             </button>
             {push === 'on' && (
               <button className="mitem" onClick={test} disabled={busy}>
-                Testnachricht senden
+                {t('detail.sendTestNotification')}
               </button>
             )}
           </>
@@ -111,33 +112,36 @@ export function AlertsSection({ onToast, onOpen }: { onToast: (t: string) => voi
 
       {fp.length > 0 && (
         <>
-          <h2 className="mh2">Finanzplan-Regeln</h2>
+          <h2 className="mh2">{t('detail.planRules')}</h2>
           <div className="mcard">
             {fp.map((r) => (
               <div className="mitem alrow" key={r.id}>
                 <label className="alcheck">
                   <input type="checkbox" checked={r.active} onChange={(e) => update(r, { active: e.target.checked })} />
-                  {r.kind === 'finanzplan_gain' ? 'Gewinn ab' : 'Stop bei −'}
+                  {r.kind === 'finanzplan_gain' ? t('detail.planGainFrom') : t('detail.planStopAt')}
                 </label>
                 <NumField value={r.threshold} onSave={(v) => update(r, { threshold: v })} suffix="%" />
                 {r.kind === 'finanzplan_gain' && (
                   <>
-                    <span>binnen</span>
-                    <NumField value={r.params.weeks ?? 4} onSave={(v) => update(r, { params: { ...r.params, weeks: Math.round(v) } })} suffix="Wo." />
+                    <span>{t('detail.within')}</span>
+                    <NumField value={r.params.weeks ?? 4} onSave={(v) => update(r, { params: { ...r.params, weeks: Math.round(v) } })} suffix={t('detail.weeksShort')} />
                   </>
                 )}
               </div>
             ))}
             <p className="mnote">
-              Gilt für Käufe ab {fp[0]?.params.since ? fp[0].params.since.split('-').reverse().join('.') : 'sofort'}. Nur Hinweise, es wird nichts gehandelt. Ausgenommen: {fp[0]?.params.exclude?.join(', ') || 'nichts'}.
+              {t('detail.planRulesNote', {
+                since: fp[0]?.params.since ? fp[0].params.since.split('-').reverse().join('.') : t('detail.immediately'),
+                excluded: fp[0]?.params.exclude?.join(', ') || t('detail.nothingExcluded'),
+              })}
             </p>
           </div>
         </>
       )}
 
-      <h2 className="mh2">Kurs-Alarme</h2>
+      <h2 className="mh2">{t('detail.priceAlerts')}</h2>
       <div className="mcard">
-        {own.length === 0 && <p className="mnote">Noch keine. Anlegen über die Glocke auf der Seite einer Aktie.</p>}
+        {own.length === 0 && <p className="mnote">{t('detail.noPriceAlerts')}</p>}
         {own.map((r) => (
           <div className="mitem alrow" key={r.id}>
             <button className="linkbtn" onClick={() => onOpen(r.symbol!)}>
@@ -145,18 +149,18 @@ export function AlertsSection({ onToast, onOpen }: { onToast: (t: string) => voi
             </button>
             <span className={r.active ? '' : 'muted'}>
               {ruleText(r)}
-              {!r.active && ' · ausgelöst'}
+              {!r.active && ` · ${t('detail.triggered')}`}
             </span>
-            <button className="ghost icon" onClick={() => remove(r)} aria-label={`Alarm ${r.symbol} löschen`} title="Löschen">
+            <button className="ghost icon" onClick={() => remove(r)} aria-label={t('detail.deleteSymbolAlert', { symbol: r.symbol ?? '' })} title={t('detail.delete')}>
               ✕
             </button>
           </div>
         ))}
       </div>
 
-      <h2 className="mh2">Zuletzt ausgelöst</h2>
+      <h2 className="mh2">{t('detail.recentlyTriggered')}</h2>
       <div className="mcard">
-        {events.length === 0 && <p className="mnote">Noch nichts ausgelöst.</p>}
+        {events.length === 0 && <p className="mnote">{t('detail.nothingTriggeredYet')}</p>}
         {events.map((e) => (
           <button className="mitem alevent" key={e.id} onClick={() => onOpen(e.symbol)}>
             <span className="alwhen muted small">{when(e.created_at)}</span>
@@ -198,6 +202,7 @@ export function AlertDialog({
   currency: string | null
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const dialog = useRef<HTMLDialogElement>(null)
   const [rules, setRules] = useState<AlertRule[]>([])
   const [kind, setKind] = useState<AlertKind>('price_above')
@@ -225,7 +230,7 @@ export function AlertDialog({
   async function add() {
     setError(null)
     const n = parseNum(value)
-    if (!Number.isFinite(n) || n <= 0) return setError('Bitte einen Wert über 0 eingeben.')
+    if (!Number.isFinite(n) || n <= 0) return setError(t('detail.enterPositiveValue'))
     const { error } = await supabase.from('alert_rules').insert({ symbol, kind, threshold: n })
     if (error) return setError(error.message)
     load()
@@ -238,10 +243,10 @@ export function AlertDialog({
 
   return (
     <dialog ref={dialog} className="dialog" onClose={onClose} aria-labelledby="al-title">
-      <h2 id="al-title">Alarme für {symbol}</h2>
+      <h2 id="al-title">{t('detail.alertsForSymbol', { symbol })}</h2>
       {price != null && (
         <p className="muted small">
-          Kurs jetzt {fmt(price)} {currency ?? ''}. Geprüft wird alle 15 Minuten zur Handelszeit.
+          {t('detail.currentPriceNote', { price: fmt(price), currency: currency ?? '' })}
         </p>
       )}
       {rules.length > 0 && (
@@ -250,9 +255,9 @@ export function AlertDialog({
             <li key={r.id}>
               <span className={r.active ? '' : 'muted'}>
                 {ruleText(r)} {r.kind !== 'change_pct_day' && (currency ?? '')}
-                {!r.active && ' · ausgelöst'}
+                {!r.active && ` · ${t('detail.triggered')}`}
               </span>
-              <button className="ghost icon" onClick={() => remove(r)} aria-label="Alarm löschen" title="Löschen">
+              <button className="ghost icon" onClick={() => remove(r)} aria-label={t('detail.deleteAlert')} title={t('detail.delete')}>
                 ✕
               </button>
             </li>
@@ -261,26 +266,26 @@ export function AlertDialog({
       )}
       <div className="fgrid">
         <label>
-          Art
+          {t('detail.alertType')}
           <select value={kind} onChange={(e) => pick(e.target.value as AlertKind)}>
-            <option value="price_above">Kurs über</option>
-            <option value="price_below">Kurs unter</option>
-            <option value="change_pct_day">Tagesbewegung ab ± %</option>
+            <option value="price_above">{t('detail.kindPriceAbove')}</option>
+            <option value="price_below">{t('detail.kindPriceBelow')}</option>
+            <option value="change_pct_day">{t('detail.kindChangePctDay')}</option>
           </select>
         </label>
         <label>
-          {kind === 'change_pct_day' ? 'Prozent' : `Kurs (${currency ?? 'Kurswährung'})`}
+          {kind === 'change_pct_day' ? t('detail.percent') : t('detail.priceWithCurrency', { currency: currency ?? t('detail.quoteCurrency') })}
           <input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
         </label>
       </div>
-      {push && push !== 'on' && <p className="muted small">Push ist auf diesem Gerät aus. Einschalten unter Konto.</p>}
+      {push && push !== 'on' && <p className="muted small">{t('detail.pushOffHint')}</p>}
       {error && <p className="error small">{error}</p>}
       <div className="dialog-actions">
         <button className="ghost" onClick={() => dialog.current?.close()}>
-          Schließen
+          {t('detail.close')}
         </button>
         <button className="primary" onClick={add}>
-          Alarm anlegen
+          {t('detail.createAlert')}
         </button>
       </div>
     </dialog>

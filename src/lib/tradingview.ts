@@ -1,3 +1,5 @@
+import { t } from '../i18n'
+
 // Parser für TradingView-Watchlist-Exporte (.txt).
 // Format: kommagetrennt (teils auch zeilenweise), Einträge wie "NASDAQ:NVDA",
 // Abschnitte beginnen mit "###Gruppenname".
@@ -48,11 +50,11 @@ export function parseTradingView(text: string): ParsedWatchlist {
     const symbol = (rest ?? '').trim().toUpperCase()
 
     if (exchange && !US_EXCHANGES.has(exchange)) {
-      unsupported.push({ raw: token, reason: `Börse ${exchange} wird nicht unterstützt (nur US)` })
+      unsupported.push({ raw: token, reason: t('common.tvUnsupportedExchange', { exchange }) })
       continue
     }
     if (!SYMBOL_RE.test(symbol)) {
-      unsupported.push({ raw: token, reason: 'Kein gültiges Kürzel' })
+      unsupported.push({ raw: token, reason: t('common.tvInvalidSymbol') })
       continue
     }
     if (seen.has(symbol)) continue

@@ -35,9 +35,9 @@ export const TEXTS = {
     dayBody: (price: string, thr: string) => `Price ${price}, alert at ±${thr} %.`,
     gainTitle: (name: string, g: string) => `${name} ${g} since purchase – sell half?`,
     gainBody: (thr: string, weeks: number, opened: string) =>
-      `Plan rule: +${thr} % within ${weeks} weeks reached (bought ${opened}). Just a heads-up.`,
+      `Financial plan: +${thr} % within ${weeks} weeks reached (bought ${opened}). Just a heads-up.`,
     stopTitle: (name: string, g: string) => `${name}: stop reached (${g})`,
-    stopBody: (thr: string) => `Plan rule: −${thr} % below cost. Just a heads-up, nothing is sold.`,
+    stopBody: (thr: string) => `Financial plan: −${thr} % below cost. Just a heads-up, nothing is sold.`,
     testTitle: "Stockdeck test",
     testBody: "Push works. Alerts arrive even when the app is closed.",
   },

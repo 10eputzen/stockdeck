@@ -1,5 +1,6 @@
 import { LOCALE } from './i18n'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { parseCsv } from './lib/csv'
 import { resolveIsins, supabase, type Portfolio } from './lib/supabase'
 import { TX_LABEL } from './lib/txLabels'
@@ -19,6 +20,7 @@ export function CsvImport({
   onClose: () => void
   onDone: (text: string) => void
 }) {
+  const { t } = useTranslation()
   const dialog = useRef<HTMLDialogElement>(null)
   useEffect(() => {
     dialog.current?.showModal()
@@ -48,9 +50,9 @@ export function CsvImport({
       let portfolio_id = target
       if (target === 'new') {
         const name = newName.trim()
-        if (!name) throw new Error('Name des neuen Depots fehlt.')
+        if (!name) throw new Error(t('portfolio.errNewDepotNameMissing'))
         const { data, error } = await supabase.from('portfolios').insert({ name, position: portfolios.length }).select('id').single()
-        if (error) throw new Error(error.code === '23505' ? 'Dieses Depot gibt es schon.' : error.message)
+        if (error) throw new Error(error.code === '23505' ? t('portfolio.depotExists') : error.message)
         portfolio_id = data.id
       }
       const isins = [...new Set(fresh.filter((r) => !r.symbol && r.isin).map((r) => r.isin!))]
@@ -94,12 +96,12 @@ export function CsvImport({
         inserted += data.length
       }
       onDone(
-        `Import fertig: ${inserted} neu, ${dupes + rows.length - inserted} schon vorhanden` +
-          (unresolved.size ? `, ${unresolved.size} ISIN nicht gefunden (${[...unresolved].slice(0, 3).join(', ')})` : '') +
-          (parsed.skipped.length ? `, ${parsed.skipped.length} Zeilen übersprungen.` : '.'),
+        t('portfolio.csvDoneBase', { inserted, existing: dupes + rows.length - inserted }) +
+          (unresolved.size ? t('portfolio.csvDoneUnresolved', { count: unresolved.size, list: [...unresolved].slice(0, 3).join(', ') }) : '') +
+          (parsed.skipped.length ? t('portfolio.csvDoneSkipped', { count: parsed.skipped.length }) : '.'),
       )
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Import fehlgeschlagen.')
+      setError(e instanceof Error ? e.message : t('portfolio.importFailed'))
       setBusy(false)
     }
   }
@@ -107,49 +109,49 @@ export function CsvImport({
   const tooMany = (parsed?.rows.length ?? 0) > MAX_ROWS
   return (
     <dialog ref={dialog} className="dialog wide-dialog" onClose={onClose} aria-labelledby="csv-title">
-      <h2 id="csv-title">Transaktionen importieren</h2>
+      <h2 id="csv-title">{t('portfolio.csvTitle')}</h2>
       <p className="muted small">
-        Parqet-Export (Aktivitäten als CSV) oder eigenes Format mit Kopfzeile, Semikolon getrennt:
+        {t('portfolio.csvHint')}
       </p>
-      <pre className="csvhint">Datum;Typ;Symbol;Stück;Kurs;Währung;Gebühren{'\n'}15.01.2026;Kauf;SAP.DE;5;200,50;EUR;1</pre>
-      <input type="file" accept=".csv,.txt,text/csv,text/plain" aria-label="Datei wählen" onChange={(e) => e.target.files?.[0] && readFile(e.target.files[0])} />
-      <textarea value={text} onChange={(e) => setText(e.target.value)} rows={5} placeholder="CSV hier einfügen" aria-label="CSV-Inhalt" />
+      <pre className="csvhint">{t('portfolio.csvExample')}</pre>
+      <input type="file" accept=".csv,.txt,text/csv,text/plain" aria-label={t('portfolio.chooseFile')} onChange={(e) => e.target.files?.[0] && readFile(e.target.files[0])} />
+      <textarea value={text} onChange={(e) => setText(e.target.value)} rows={5} placeholder={t('portfolio.csvPlaceholder')} aria-label={t('portfolio.csvContentAria')} />
       <div className="fgrid">
         <label>
-          In Depot
+          {t('portfolio.intoDepot')}
           <select value={target} onChange={(e) => setTarget(e.target.value)}>
             {portfolios.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
               </option>
             ))}
-            <option value="new">+ Neues Depot …</option>
+            <option value="new">{t('portfolio.newDepotOption')}</option>
           </select>
         </label>
         {target === 'new' && (
           <label>
-            Name des Depots
-            <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="z. B. DKB" maxLength={60} />
+            {t('portfolio.depotNameLabel')}
+            <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t('portfolio.csvDepotPlaceholder')} maxLength={60} />
           </label>
         )}
       </div>
       {parsed && (
         <div className="preview" aria-live="polite">
           <p className="small">
-            Erkannt: <strong>{parsed.format === 'parqet' ? 'Parqet-Export' : 'einfaches Format'}</strong> · {fresh.length} neu
-            {dupes > 0 && ` · ${dupes} schon vorhanden`}
-            {parsed.skipped.length > 0 && ` · ${parsed.skipped.length} übersprungen`}
+            {t('portfolio.csvDetected')}: <strong>{parsed.format === 'parqet' ? t('portfolio.csvFormatParqet') : t('portfolio.csvFormatSimple')}</strong> · {t('portfolio.countNew', { count: fresh.length })}
+            {dupes > 0 && ` · ${t('portfolio.countExisting', { count: dupes })}`}
+            {parsed.skipped.length > 0 && ` · ${t('portfolio.countSkipped', { count: parsed.skipped.length })}`}
           </p>
           {fresh.length > 0 && (
             <div className="txtable-wrap">
               <table className="txtable">
                 <thead>
                   <tr>
-                    <th>Datum</th>
-                    <th>Art</th>
-                    <th>Wert</th>
-                    <th className="num">Stück</th>
-                    <th className="num">Kurs</th>
+                    <th>{t('portfolio.colDate')}</th>
+                    <th>{t('portfolio.colType')}</th>
+                    <th>{t('portfolio.colSecurity')}</th>
+                    <th className="num">{t('portfolio.colShares')}</th>
+                    <th className="num">{t('portfolio.colPrice')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -166,25 +168,25 @@ export function CsvImport({
                   ))}
                 </tbody>
               </table>
-              {fresh.length > 8 && <p className="muted small">… und {fresh.length - 8} weitere</p>}
+              {fresh.length > 8 && <p className="muted small">{t('portfolio.andMore', { count: fresh.length - 8 })}</p>}
             </div>
           )}
           {parsed.skipped.length > 0 && (
             <p className="muted small">
-              Übersprungen: {parsed.skipped.slice(0, 4).map((s) => `Zeile ${s.line} (${s.reason})`).join(', ')}
+              {t('portfolio.skippedPrefix')}: {parsed.skipped.slice(0, 4).map((s) => t('portfolio.skippedLine', { line: s.line, reason: s.reason })).join(', ')}
               {parsed.skipped.length > 4 && ' …'}
             </p>
           )}
         </div>
       )}
-      {tooMany && <p className="error small">Mehr als {MAX_ROWS} Zeilen auf einmal sind nicht möglich.</p>}
+      {tooMany && <p className="error small">{t('portfolio.csvTooMany', { max: MAX_ROWS })}</p>}
       {error && <p className="error small">{error}</p>}
       <div className="dialog-actions">
         <button className="ghost" onClick={() => dialog.current?.close()} disabled={busy}>
-          Abbrechen
+          {t('portfolio.cancel')}
         </button>
         <button className="primary" onClick={run} disabled={busy || fresh.length === 0 || tooMany}>
-          {busy ? 'Importiert …' : `${fresh.length} importieren`}
+          {busy ? t('portfolio.csvImporting') : t('portfolio.csvImportCount', { count: fresh.length })}
         </button>
       </div>
     </dialog>

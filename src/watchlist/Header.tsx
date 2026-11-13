@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { Columns } from "../lib/columns";
 import type { SearchResult } from "../lib/supabase";
 import { ColumnMenu } from "../ColumnMenu";
@@ -32,24 +33,25 @@ export function WatchHeader({
   cols: Columns;
   setCols: (c: Columns) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="listhead">
-      <h1>Watchlist</h1>
+      <h1>{t("watchlist.title")}</h1>
       {narrow ? (
         <div className="mtools">
           <button
             className="ghost iconbtn"
             onClick={onSearch}
-            aria-label="Aktie hinzufügen"
-            title="Aktie hinzufügen"
+            aria-label={t("watchlist.addStock")}
+            title={t("watchlist.addStock")}
           >
             <RouteIcon route="suche" size={20} />
           </button>
           <button
             className={`ghost iconbtn refreshbtn ${refreshing ? "spin" : ""}`}
             onClick={onRefresh}
-            aria-label="Aktualisieren"
-            title="Aktualisieren"
+            aria-label={t("watchlist.refresh")}
+            title={t("watchlist.refresh")}
           >
             <span><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.5-5.8" /><path d="M20 4v5h-5" /></svg></span>
           </button>
@@ -57,7 +59,7 @@ export function WatchHeader({
             className={`ghost editbtn ${editMode ? "on" : ""}`}
             onClick={onToggleEdit}
           >
-            {editMode ? "Fertig" : "Bearbeiten"}
+            {editMode ? t("watchlist.done") : t("watchlist.edit")}
           </button>
         </div>
       ) : (
@@ -65,10 +67,10 @@ export function WatchHeader({
           <AddStock onAdd={onAdd} existing={existing} />
           <div className="tools">
             <button className="ghost" onClick={onAddGroup}>
-              + Gruppe
+              {t("watchlist.addGroupShort")}
             </button>
             <button className="ghost" onClick={onImport}>
-              Import
+              {t("watchlist.import")}
             </button>
             <ColumnMenu cols={cols} onChange={setCols} />
           </div>
@@ -88,17 +90,18 @@ export function SearchSheet({
   existing: string[];
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className="sheet"
       role="dialog"
       aria-modal="true"
-      aria-label="Aktie hinzufügen"
+      aria-label={t("watchlist.addStock")}
     >
       <div className="listhead">
-        <h1>Aktie hinzufügen</h1>
+        <h1>{t("watchlist.addStock")}</h1>
         <button className="ghost" onClick={onClose}>
-          Fertig
+          {t("watchlist.done")}
         </button>
       </div>
       <AddStock onAdd={onAdd} existing={existing} autoFocus inline />

@@ -1,6 +1,7 @@
 import { AlertDialog } from './Alerts'
 import { PositionTab } from './portfolio/PositionTab'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { money, moneySigned, pct } from './lib/format'
 import {
   fetchEvents,
@@ -35,6 +36,7 @@ export function Detail({
   onBack: () => void
   onAdd: () => void
 }) {
+  const { t } = useTranslation()
   const [ownQ, setQ] = useState<Quote>()
   const [ownP, setP] = useState<Profile>()
   const q = quote ?? ownQ
@@ -74,9 +76,9 @@ export function Detail({
 
   const name = p?.name
   return (
-    <section className="detail" aria-label={`${symbol} Details`}>
+    <section className="detail" aria-label={t('detail.sectionLabel', { symbol })}>
       <div className="dhead">
-        <button className="ghost icon back" onClick={onBack} aria-label="Zurück zur Liste" title="Zurück">
+        <button className="ghost icon back" onClick={onBack} aria-label={t('detail.backToList')} title={t('detail.back')}>
           <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
             <path d="M15 5l-7 7 7 7" />
           </svg>
@@ -86,14 +88,14 @@ export function Detail({
           <h1 className="ellipsis">{name ?? symbol}</h1>
           <span className="muted">{symbol}</span>
         </div>
-        <button className="ghost icon bell" onClick={() => setAlertOpen(true)} aria-label="Alarme" title="Alarme">
+        <button className="ghost icon bell" onClick={() => setAlertOpen(true)} aria-label={t('detail.alerts')} title={t('detail.alerts')}>
           <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
             <path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0" />
           </svg>
         </button>
         {!onList && (
           <button className="ghost addbtn" onClick={onAdd}>
-            + Watchlist
+            {t('detail.addToWatchlist')}
           </button>
         )}
         {alertOpen && <AlertDialog symbol={symbol} price={q?.price ?? null} currency={q?.currency ?? null} onClose={() => setAlertOpen(false)} />}
@@ -110,7 +112,7 @@ export function Detail({
         <span className="muted small ext-line">
           {q?.ext_session && q.ext_price != null && q.ext_change_pct != null ? (
             <>
-              {q.ext_session === 'pre' ? 'Vorbörslich' : 'Nachbörslich'} {money(q.currency).format(q.ext_price)}{' '}
+              {q.ext_session === 'pre' ? t('detail.preMarket') : t('detail.afterHours')} {money(q.currency).format(q.ext_price)}{' '}
               <span className={`extchg ${dirOf(q.ext_change_pct)}`}>({pct.format(q.ext_change_pct / 100)})</span>
             </>
           ) : (
@@ -130,12 +132,12 @@ export function Detail({
         )}
       </div>
 
-      <div className="subtabs" role="tablist" aria-label="Ansicht">
+      <div className="subtabs" role="tablist" aria-label={t('detail.viewTabs')}>
         <button role="tab" aria-selected={tab === 'chart'} className={tab === 'chart' ? 'active' : ''} onClick={() => setTab('chart')}>
-          Chart
+          {t('detail.tabChart')}
         </button>
         <button role="tab" aria-selected={tab === 'news'} className={tab === 'news' ? 'active' : ''} onClick={() => setTab('news')}>
-          News
+          {t('detail.tabNews')}
         </button>
         <button
           role="tab"
@@ -143,13 +145,13 @@ export function Detail({
           className={tab === 'kennzahlen' ? 'active' : ''}
           onClick={() => setTab('kennzahlen')}
         >
-          Kennzahlen
+          {t('detail.tabMetrics')}
         </button>
         <button role="tab" aria-selected={tab === 'signale'} className={tab === 'signale' ? 'active' : ''} onClick={() => setTab('signale')}>
-          Signale
+          {t('detail.tabSignals')}
         </button>
         <button role="tab" aria-selected={tab === 'position'} className={tab === 'position' ? 'active' : ''} onClick={() => setTab('position')}>
-          Position
+          {t('detail.tabPosition')}
         </button>
       </div>
 

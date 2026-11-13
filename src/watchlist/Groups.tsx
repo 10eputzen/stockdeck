@@ -6,6 +6,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+import { t } from "../i18n";
 import { FLEX_MIN, flexKey, MAX_WIDTH, MIN_WIDTH, type Columns, type OrderKey } from "../lib/columns";
 import type { Group, WatchItem } from "../lib/supabase";
 import { GroupHeader } from "./GroupHeader";
@@ -30,13 +32,14 @@ function ResizeHandle({
   onWidths: (w: Widths, done: boolean) => void;
   onReset: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <span
       className="colresize"
       role="separator"
       aria-orientation="vertical"
-      aria-label={`Breite von ${label} ändern`}
-      title="Ziehen: Breite ändern · Doppelklick: zurücksetzen"
+      aria-label={t("watchlist.resizeColAria", { label })}
+      title={t("watchlist.resizeColTitle")}
       onDoubleClick={onReset}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
@@ -89,14 +92,14 @@ function ResizeHandle({
 }
 
 const HEAD: Record<OrderKey, { label: string; cls: string }> = {
-  symbol: { label: "Kürzel", cls: "cell" },
-  name: { label: "Name", cls: "cell" },
-  price: { label: "Kurs", cls: "cell num" },
-  chg_abs: { label: "Heute $", cls: "cell num hide-sm" },
-  chg_pct: { label: "Heute %", cls: "cell num" },
-  range: { label: "Tagesspanne", cls: "cell num hide-sm" },
-  analyst: { label: "Analysten", cls: "cell hide-sm" },
-  earnings: { label: "Nächste Zahlen", cls: "cell hide-sm" },
+  symbol: { label: t("watchlist.colSymbol"), cls: "cell" },
+  name: { label: t("watchlist.colName"), cls: "cell" },
+  price: { label: t("watchlist.colPrice"), cls: "cell num" },
+  chg_abs: { label: t("watchlist.colChgAbs"), cls: "cell num hide-sm" },
+  chg_pct: { label: t("watchlist.colChgPct"), cls: "cell num" },
+  range: { label: t("watchlist.colRange"), cls: "cell num hide-sm" },
+  analyst: { label: t("watchlist.colAnalyst"), cls: "cell hide-sm" },
+  earnings: { label: t("watchlist.colEarnings"), cls: "cell hide-sm" },
 };
 
 export function HeaderRow({
@@ -147,6 +150,7 @@ export function GroupSection({
   onShare?: () => void;
   children: ReactNode;
 }) {
+  const { t } = useTranslation();
   const {
     setNodeRef,
     isDragging,
@@ -161,7 +165,7 @@ export function GroupSection({
       ref={setNodeRef}
       className={`group ${isDragging ? "dragging" : ""}`}
       style={{ transform: CSS.Translate.toString(transform), transition }}
-      aria-label={`Gruppe ${group.name}`}
+      aria-label={t("watchlist.groupAria", { name: group.name })}
     >
       <GroupHeader
         group={group}
@@ -184,6 +188,7 @@ export function Container({
   hidden?: boolean;
   children: (i: WatchItem) => ReactNode;
 }) {
+  const { t } = useTranslation();
   const { setNodeRef, isOver } = useDroppable({
     id: `c:${id}`,
     data: { type: "container", container: id },
@@ -199,7 +204,7 @@ export function Container({
       >
         {!hidden && list.map(children)}
         {!hidden && list.length === 0 && (
-          <div className="drophint muted">Hierher ziehen</div>
+          <div className="drophint muted">{t("watchlist.dropHint")}</div>
         )}
       </div>
     </SortableContext>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { holdings, valuate } from '../../supabase/functions/_shared/positions.ts'
 import { eur, eurSigned, money, pct } from '../lib/format'
 import { fetchFx, supabase, TX_COLS, type Portfolio, type Quote, type Transaction } from '../lib/supabase'
@@ -8,6 +9,7 @@ import { pfDir as dirOf, qty, qtyExact } from './format'
 
 /** Position und Transaktionen eines Werts über alle Depots; Transaktionen anlegen/bearbeiten. */
 export function PositionTab({ symbol, quote }: { symbol: string; quote?: Quote }) {
+  const { t } = useTranslation()
   const [state, setState] = useState<{ portfolios: Portfolio[]; txs: Transaction[]; fx: Record<string, number> } | null>(null)
   const [edit, setEdit] = useState<Transaction | 'new' | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
@@ -41,35 +43,35 @@ export function PositionTab({ symbol, quote }: { symbol: string; quote?: Quote }
           <div className="metric range52">
             <span className="lbl">{byPf.get(p.portfolio_id)}</span>
             <span className="val">
-              {qty.format(p.quantity)} Stück · {p.value == null ? '–' : eur.format(p.value)}
+              {t('portfolio.sharesQty', { qty: qty.format(p.quantity) })} · {p.value == null ? '–' : eur.format(p.value)}
             </span>
           </div>
           <div className="metric">
-            <span className="lbl">Ø Einstand</span>
+            <span className="lbl">{t('portfolio.avgCost')}</span>
             <span className="val">{eur.format(p.cost / p.quantity)}</span>
           </div>
           <div className="metric">
-            <span className="lbl">Einstand gesamt</span>
+            <span className="lbl">{t('portfolio.totalCost')}</span>
             <span className="val">{eur.format(p.cost)}</span>
           </div>
           <div className="metric">
-            <span className="lbl">Gewinn/Verlust</span>
+            <span className="lbl">{t('portfolio.gainLoss')}</span>
             <span className={`val ${dirOf(p.gain)}`}>
               {p.gain == null ? '–' : `${eurSigned.format(p.gain)} (${p.gain_pct == null ? '' : pct.format(p.gain_pct)})`}
             </span>
           </div>
           <div className="metric">
-            <span className="lbl">Gekauft seit</span>
+            <span className="lbl">{t('portfolio.heldSince')}</span>
             <span className="val">{p.opened ? p.opened.split('-').reverse().join('.') : '–'}</span>
           </div>
         </div>
       ))}
-      {positions.length === 0 && <p className="muted">Keine offene Position in diesem Wert.</p>}
+      {positions.length === 0 && <p className="muted">{t('portfolio.noPositionInSymbol')}</p>}
       {msg && <p className="small" role="status">{msg}</p>}
       <div className="listhead pt">
-        <h2 className="mh2">Transaktionen</h2>
+        <h2 className="mh2">{t('portfolio.transactions')}</h2>
         <button className="ghost" onClick={() => setEdit('new')}>
-          + Transaktion
+          {t('portfolio.addTx')}
         </button>
       </div>
       {state.txs.length > 0 ? (
@@ -77,30 +79,30 @@ export function PositionTab({ symbol, quote }: { symbol: string; quote?: Quote }
           <table className="txtable">
             <thead>
               <tr>
-                <th>Datum</th>
-                <th>Art</th>
-                <th className="hide-sm">Depot</th>
-                <th className="num">Stück</th>
-                <th className="num">Kurs</th>
-                <th className="num hide-sm">Gebühren</th>
+                <th>{t('portfolio.colDate')}</th>
+                <th>{t('portfolio.colType')}</th>
+                <th className="hide-sm">{t('portfolio.colDepot')}</th>
+                <th className="num">{t('portfolio.colShares')}</th>
+                <th className="num">{t('portfolio.colPrice')}</th>
+                <th className="num hide-sm">{t('portfolio.colFees')}</th>
               </tr>
             </thead>
             <tbody>
-              {state.txs.map((t) => (
-                <tr key={t.id} tabIndex={0} onClick={() => setEdit(t)} onKeyDown={(e) => e.key === 'Enter' && setEdit(t)} title="Bearbeiten">
-                  <td>{t.date.split('-').reverse().join('.')}</td>
-                  <td>{TX_LABEL[t.type]}</td>
-                  <td className="hide-sm">{byPf.get(t.portfolio_id)}</td>
-                  <td className="num">{t.quantity ? qtyExact.format(t.quantity) : ''}</td>
-                  <td className="num">{t.type === 'split' ? `1:${qtyExact.format(t.quantity)}` : money(t.currency).format(t.price)}</td>
-                  <td className="num hide-sm">{t.fees ? money(t.currency).format(t.fees) : ''}</td>
+              {state.txs.map((tx) => (
+                <tr key={tx.id} tabIndex={0} onClick={() => setEdit(tx)} onKeyDown={(e) => e.key === 'Enter' && setEdit(tx)} title={t('portfolio.edit')}>
+                  <td>{tx.date.split('-').reverse().join('.')}</td>
+                  <td>{TX_LABEL[tx.type]}</td>
+                  <td className="hide-sm">{byPf.get(tx.portfolio_id)}</td>
+                  <td className="num">{tx.quantity ? qtyExact.format(tx.quantity) : ''}</td>
+                  <td className="num">{tx.type === 'split' ? `1:${qtyExact.format(tx.quantity)}` : money(tx.currency).format(tx.price)}</td>
+                  <td className="num hide-sm">{tx.fees ? money(tx.currency).format(tx.fees) : ''}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : (
-        <p className="muted small">Noch keine Transaktionen.</p>
+        <p className="muted small">{t('portfolio.noTransactionsYet')}</p>
       )}
       {edit && (
         <TxDialog

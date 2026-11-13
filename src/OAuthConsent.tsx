@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import type { OAuthAuthorizationDetails } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 
@@ -13,9 +14,10 @@ type State =
 
 /** Zustimmungsseite: zeigt, welche Anwendung Zugriff auf Watchlist und Portfolio möchte. */
 export function OAuthConsent({ email }: { email?: string }) {
+  const { t } = useTranslation()
   const authorizationId = new URLSearchParams(window.location.search).get('authorization_id')
   const [state, setState] = useState<State>(
-    authorizationId ? { kind: 'loading' } : { kind: 'error', message: 'Die Anfrage ist unvollständig.' },
+    authorizationId ? { kind: 'loading' } : { kind: 'error', message: t('common.consentIncomplete') },
   )
   const [busy, setBusy] = useState(false)
 
@@ -27,13 +29,13 @@ export function OAuthConsent({ email }: { email?: string }) {
       const { data: allowed } = await supabase.rpc('is_allowed')
       if (cancelled) return
       if (allowed !== true) {
-        setState({ kind: 'error', message: 'Dieses Konto ist für stockdeck nicht freigeschaltet.' })
+        setState({ kind: 'error', message: t('common.consentNotAllowed') })
         return
       }
       const { data, error } = await supabase.auth.oauth.getAuthorizationDetails(authorizationId)
       if (cancelled) return
       if (error || !data) {
-        setState({ kind: 'error', message: 'Die Anfrage ist abgelaufen oder ungültig. Bitte in der Anwendung neu verbinden.' })
+        setState({ kind: 'error', message: t('common.consentExpired') })
       } else if ('authorization_id' in data) {
         setState({ kind: 'ask', details: data })
       } else {
@@ -44,7 +46,7 @@ export function OAuthConsent({ email }: { email?: string }) {
     return () => {
       cancelled = true
     }
-  }, [authorizationId])
+  }, [authorizationId, t])
 
   const decide = async (approve: boolean) => {
     if (!authorizationId) return
@@ -54,7 +56,7 @@ export function OAuthConsent({ email }: { email?: string }) {
       : await supabase.auth.oauth.denyAuthorization(authorizationId, { skipBrowserRedirect: true })
     if (error || !data) {
       setBusy(false)
-      setState({ kind: 'error', message: 'Das hat nicht geklappt. Bitte in der Anwendung neu verbinden.' })
+      setState({ kind: 'error', message: t('common.consentFailed') })
       return
     }
     setState({ kind: 'redirecting' })
@@ -65,14 +67,14 @@ export function OAuthConsent({ email }: { email?: string }) {
   if (state.kind === 'redirecting') {
     return (
       <section className="login">
-        <p className="muted">Weiterleitung …</p>
+        <p className="muted">{t('common.redirecting')}</p>
       </section>
     )
   }
   if (state.kind === 'error') {
     return (
       <section className="login">
-        <h1>Zugriff nicht möglich</h1>
+        <h1>{t('common.consentErrorTitle')}</h1>
         <p className="muted">{state.message}</p>
       </section>
     )
@@ -87,21 +89,24 @@ export function OAuthConsent({ email }: { email?: string }) {
   }
   return (
     <section className="login">
-      <h1>Zugriff erlauben?</h1>
+      <h1>{t('common.consentTitle')}</h1>
       <p>
-        <strong>{client.name || 'Eine Anwendung'}</strong> möchte auf deine Watchlist und dein Portfolio zugreifen
-        und dort Werte und Transaktionen anlegen können. Geld bewegt sie nicht.
+        <Trans
+          i18nKey="common.consentBody"
+          values={{ client: client.name || t('common.consentDefaultClient') }}
+          components={{ strong: <strong /> }}
+        />
       </p>
       <p className="muted">
-        Rückkehr zu {host}
-        {email ? ` · angemeldet als ${email}` : ''}
+        {t('common.consentReturnTo', { host })}
+        {email ? ` · ${t('common.consentSignedInAs', { email })}` : ''}
       </p>
       <p>
         <button className="primary" disabled={busy} onClick={() => decide(true)}>
-          Erlauben
+          {t('common.allow')}
         </button>{' '}
         <button className="ghost" disabled={busy} onClick={() => decide(false)}>
-          Ablehnen
+          {t('common.deny')}
         </button>
       </p>
     </section>

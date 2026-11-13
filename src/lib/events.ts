@@ -1,4 +1,4 @@
-import { LOCALE } from '../i18n'
+import { LOCALE, t } from '../i18n'
 import type { EarningsEvent } from './supabase'
 
 /** Tage bis zum Termin (Kalendertage, lokale Zeit); negativ = vorbei. */
@@ -19,9 +19,9 @@ const toDate = (iso: string) => {
 const colDate = new Intl.DateTimeFormat(LOCALE, { weekday: 'short', day: '2-digit', month: '2-digit' })
 
 export const HOUR_LABEL: Record<string, string> = {
-  bmo: 'vor Börsenöffnung',
-  amc: 'nach Börsenschluss',
-  dmh: 'während des Handels',
+  bmo: t('common.earningsBmo'),
+  amc: t('common.earningsAmc'),
+  dmh: t('common.earningsDmh'),
 }
 
 /** Kurztext für die Listenzeile, nur wenn die Zahlen in höchstens 14 Tagen kommen. */
@@ -29,9 +29,9 @@ export function earningsBadge(ev: EarningsEvent | undefined, now = new Date()): 
   if (!ev?.next_date) return null
   const days = daysUntil(ev.next_date, now)
   if (days < 0 || days > 14) return null
-  if (days === 0) return 'Zahlen heute'
-  if (days === 1) return 'Zahlen morgen'
-  return `Zahlen ${short.format(toDate(ev.next_date))}`
+  if (days === 0) return t('common.earningsToday')
+  if (days === 1) return t('common.earningsTomorrow')
+  return t('common.earningsOnDate', { date: short.format(toDate(ev.next_date)) })
 }
 
 /** Nächster Termin für die Spalte, z. B. „Di. 17.11.“; vergangene Termine zählen nicht. */

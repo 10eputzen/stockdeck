@@ -1,4 +1,5 @@
 import { useState, type Dispatch, type SetStateAction } from "react";
+import { t } from "../i18n";
 import { readCache, writeCache } from "../lib/cache";
 import {
   supabase,
@@ -54,7 +55,7 @@ export function useSharedActions({
     const own = sharedItems.filter((i) => i.list_id === list.id);
     const there = own.find((i) => i.symbol === r.symbol);
     if (there)
-      return setToast({ text: `${r.symbol} ist schon drin (von ${there.added_by_name})` });
+      return setToast({ text: t("watchlist.alreadyInListBy", { symbol: r.symbol, name: there.added_by_name }) });
     const { error } = await supabase.from("shared_list_items").insert({
       list_id: list.id,
       symbol: r.symbol,
@@ -62,9 +63,9 @@ export function useSharedActions({
       position: own.length ? Math.max(...own.map((i) => i.position)) + 1 : 0,
     });
     if (error?.code === "23505")
-      setToast({ text: `${r.symbol} ist schon drin (jemand war schneller)` });
-    else if (error) setError("Konnte nicht hinzugefügt werden.");
-    else if (narrow) setToast({ text: `${r.symbol} zu „${list.name}“ hinzugefügt` });
+      setToast({ text: t("watchlist.alreadyInListRace", { symbol: r.symbol }) });
+    else if (error) setError(t("watchlist.errAdd"));
+    else if (narrow) setToast({ text: t("watchlist.addedToListToast", { symbol: r.symbol, list: list.name }) });
     await loadAll();
   }
 
@@ -74,11 +75,11 @@ export function useSharedActions({
       .from("shared_list_items")
       .delete()
       .eq("id", item.id);
-    if (error) return fail("Konnte nicht entfernt werden.");
+    if (error) return fail(t("watchlist.errRemove"));
     setToast({
-      text: `${item.symbol} entfernt`,
+      text: t("watchlist.removedToast", { symbol: item.symbol }),
       action: {
-        label: "Rückgängig",
+        label: t("watchlist.undo"),
         run: async () => {
           const { error } = await supabase.from("shared_list_items").insert({
             list_id: item.list_id,
@@ -86,7 +87,7 @@ export function useSharedActions({
             name: item.name,
             position: item.position,
           });
-          if (error && error.code !== "23505") setError("Wiederherstellen fehlgeschlagen.");
+          if (error && error.code !== "23505") setError(t("watchlist.errRestore"));
           await loadAll();
         },
       },
@@ -100,21 +101,21 @@ export function useSharedActions({
       .from("shared_lists")
       .update({ name })
       .eq("id", list.id);
-    if (error) fail("Umbenennen fehlgeschlagen.");
+    if (error) fail(t("watchlist.errRename"));
   }
 
   /** Macht aus einer eigenen Gruppe eine geteilte Liste; liefert deren ID. */
   async function shareGroup(g: Group): Promise<string | null> {
     const ok = await confirm({
-      title: `Gruppe „${g.name}“ teilen?`,
-      message: "Sie wird zur geteilten Liste, ihre Werte wandern mit. Danach lädst du Personen per E-Mail ein.",
-      confirmLabel: "Teilen",
+      title: t("watchlist.shareGroupConfirmTitle", { name: g.name }),
+      message: t("watchlist.shareGroupConfirmMsg"),
+      confirmLabel: t("watchlist.share"),
     });
     if (!ok) return null;
     const { data, error } = await supabase.rpc("share_group", { p_group: g.id });
     await loadAll();
     if (error) {
-      setError("Gruppe konnte nicht geteilt werden.");
+      setError(t("watchlist.errShareGroup"));
       return null;
     }
     return data as string;
@@ -125,7 +126,7 @@ export function useSharedActions({
       p_list: list.id,
       p_email: email,
     });
-    if (error) return error.message || "Einladen fehlgeschlagen.";
+    if (error) return error.message || t("watchlist.errInvite");
     await loadAll();
     return null;
   }
@@ -141,14 +142,14 @@ export function useSharedActions({
       .delete()
       .eq("list_id", list.id)
       .eq("email", email);
-    if (error) fail("Konnte nicht entfernt werden.");
+    if (error) fail(t("watchlist.errRemove"));
   }
 
   async function leave(list: SharedList, myEmail: string) {
     const ok = await confirm({
-      title: `Liste „${list.name}“ verlassen?`,
-      message: "Du siehst sie danach nicht mehr.",
-      confirmLabel: "Verlassen",
+      title: t("watchlist.leaveConfirmTitle", { name: list.name }),
+      message: t("watchlist.leaveConfirmMsg"),
+      confirmLabel: t("watchlist.leave"),
       danger: true,
     });
     if (!ok) return false;
@@ -158,7 +159,7 @@ export function useSharedActions({
       .eq("list_id", list.id)
       .eq("email", myEmail.toLowerCase());
     if (error) {
-      fail("Verlassen fehlgeschlagen.");
+      fail(t("watchlist.errLeave"));
       return false;
     }
     await loadAll();
@@ -167,20 +168,19 @@ export function useSharedActions({
 
   async function unshare(list: SharedList) {
     const ok = await confirm({
-      title: `Teilen von „${list.name}“ beenden?`,
-      message:
-        "Die Liste verschwindet für alle anderen, ihre Werte kommen als eigene Gruppe zurück. Wer nur über diese Liste Zugang hatte, verliert den Zugang zu Stockdeck.",
-      confirmLabel: "Beenden",
+      title: t("watchlist.unshareConfirmTitle", { name: list.name }),
+      message: t("watchlist.unshareConfirmMsg"),
+      confirmLabel: t("watchlist.endSharing"),
       danger: true,
     });
     if (!ok) return false;
     const { error } = await supabase.rpc("unshare_list", { p_list: list.id });
     await loadAll();
     if (error) {
-      setError("Teilen konnte nicht beendet werden.");
+      setError(t("watchlist.errUnshare"));
       return false;
     }
-    setToast({ text: `„${list.name}“ ist wieder eine eigene Gruppe` });
+    setToast({ text: t("watchlist.unsharedToast", { name: list.name }) });
     return true;
   }
 

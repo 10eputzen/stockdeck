@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Ctx, type ConfirmOptions, type PromptOptions } from './useDialogs'
 
 type Request = { id: number } & (
@@ -45,6 +46,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
 }
 
 function AskDialog({ request, onDone }: { request: Request; onDone: (value: boolean | string | null) => void }) {
+  const { t } = useTranslation()
   const dialog = useRef<HTMLDialogElement>(null)
   const input = useRef<HTMLInputElement>(null)
   const okBtn = useRef<HTMLButtonElement>(null)
@@ -108,7 +110,7 @@ function AskDialog({ request, onDone }: { request: Request; onDone: (value: bool
         )}
         <div className="dialog-actions">
           <button type="button" className="ghost" onClick={() => dialog.current?.close()}>
-            Abbrechen
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
@@ -116,7 +118,7 @@ function AskDialog({ request, onDone }: { request: Request; onDone: (value: bool
             disabled={!canSubmit}
             ref={okBtn}
           >
-            {request.opts.confirmLabel ?? (isPrompt ? 'Speichern' : 'OK')}
+            {request.opts.confirmLabel ?? (isPrompt ? t('common.save') : t('common.ok'))}
           </button>
         </div>
       </form>

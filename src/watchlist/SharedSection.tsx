@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import type { SearchResult, SharedItem, SharedList } from "../lib/supabase";
 import { AddStock } from "./AddStock";
 import { NameEditor } from "./GroupHeader";
@@ -36,20 +37,23 @@ export function SharedSection({
   onAdd: (r: SearchResult) => void;
   children: (i: SharedItem) => ReactNode;
 }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
   const people = list.members.length + 1;
   const who = isOwner
-    ? `Geteilt mit ${list.members.map((m) => m.email).join(", ") || "noch niemandem"}`
-    : `Geteilt von ${list.owner_name}`;
+    ? t("watchlist.sharedWith", {
+        members: list.members.map((m) => m.email).join(", ") || t("watchlist.nobodyYet"),
+      })
+    : t("watchlist.sharedBy", { owner: list.owner_name });
   return (
-    <section className="group shared" aria-label={`Geteilte Liste ${list.name}`}>
+    <section className="group shared" aria-label={t("watchlist.sharedListAria", { name: list.name })}>
       <div className="grouphead">
         <span className="ghost icon gh-tool handle-ph" aria-hidden="true">⠿</span>
         <button
           className="ghost icon chevron"
           aria-expanded={!collapsed}
-          aria-label={collapsed ? `${list.name} aufklappen` : `${list.name} einklappen`}
+          aria-label={collapsed ? t("watchlist.expandGroup", { name: list.name }) : t("watchlist.collapseGroup", { name: list.name })}
           onClick={onToggle}
         >
           <span className={collapsed ? "rot" : ""}>▾</span>
@@ -71,7 +75,7 @@ export function SharedSection({
             {list.name}
           </button>
         )}
-        <button className="sharetag" onClick={onShare} title={who} aria-label={`${who}. Teilen verwalten`}>
+        <button className="sharetag" onClick={onShare} title={who} aria-label={t("watchlist.manageSharingAria", { who })}>
           <ShareIcon />
           <span>{people}</span>
         </button>
@@ -79,9 +83,9 @@ export function SharedSection({
         <span className="grow" />
         <button
           className={`ghost icon ${adding ? "on" : ""}`}
-          aria-label={`Aktie zu ${list.name} hinzufügen`}
+          aria-label={t("watchlist.addStockToListAria", { name: list.name })}
           aria-expanded={adding}
-          title="Aktie hinzufügen"
+          title={t("watchlist.addStock")}
           onClick={() => setAdding((a) => !a)}
         >
           +
@@ -89,8 +93,8 @@ export function SharedSection({
         {isOwner && (
           <button
             className="ghost icon gh-tool"
-            aria-label={`${list.name} umbenennen`}
-            title="Umbenennen"
+            aria-label={t("watchlist.renameItemAria", { name: list.name })}
+            title={t("watchlist.rename")}
             onClick={() => setEditing(true)}
           >
             ✎
@@ -111,7 +115,7 @@ export function SharedSection({
         <div className="dropzone">
           {items.map(children)}
           {items.length === 0 && (
-            <div className="drophint muted">Noch leer. Über + Aktien hinzufügen.</div>
+            <div className="drophint muted">{t("watchlist.sharedEmpty")}</div>
           )}
         </div>
       )}

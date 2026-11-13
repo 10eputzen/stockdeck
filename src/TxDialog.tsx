@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ISIN_RE, parseNum as num } from './lib/csv'
 import { resolveIsins, supabase, type Portfolio, type Transaction, type TxType } from './lib/supabase'
 import { TX_LABEL } from './lib/txLabels'
@@ -24,6 +25,7 @@ export function TxDialog({
   onClose: () => void
   onSaved: (text: string) => void
 }) {
+  const { t } = useTranslation()
   const { confirm } = useDialogs()
   const dialog = useRef<HTMLDialogElement>(null)
   useEffect(() => {
@@ -47,7 +49,7 @@ export function TxDialog({
   const [error, setError] = useState<string | null>(null)
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((o) => ({ ...o, [k]: e.target.value }))
   const needsQty = f.type !== 'dividend' && f.type !== 'fee'
-  const priceLabel = f.type === 'split' ? null : needsQty ? 'Kurs je Stück' : 'Betrag (oder Kurs je Stück)'
+  const priceLabel = f.type === 'split' ? null : needsQty ? t('portfolio.txPricePerShare') : t('portfolio.txAmountOrPrice')
 
   async function save() {
     setError(null)
@@ -57,9 +59,9 @@ export function TxDialog({
     const taxes = num(f.taxes)
     const fx = f.fx_rate.trim() ? num(f.fx_rate) : null
     if ([quantity, price, fees, taxes].some((n) => !Number.isFinite(n) || n < 0) || (fx != null && !(fx > 0)))
-      return setError('Bitte Zahlen prüfen.')
-    if (needsQty && quantity <= 0) return setError(f.type === 'split' ? 'Verhältnis fehlt (4 = aus 1 werden 4).' : 'Stückzahl fehlt.')
-    if (!/^[A-Z]{3}$/.test(f.currency.trim().toUpperCase())) return setError('Währung als Kürzel, z. B. EUR.')
+      return setError(t('portfolio.txErrNumbers'))
+    if (needsQty && quantity <= 0) return setError(f.type === 'split' ? t('portfolio.txErrSplitRatio') : t('portfolio.txErrQtyMissing'))
+    if (!/^[A-Z]{3}$/.test(f.currency.trim().toUpperCase())) return setError(t('portfolio.txErrCurrency'))
     setBusy(true)
     try {
       let symbol = f.symbol.trim().toUpperCase()
@@ -67,22 +69,22 @@ export function TxDialog({
       let name: string | null = tx?.name ?? null
       if (ISIN_RE.test(symbol)) {
         const r = (await resolveIsins([symbol]))[0]
-        if (!r?.symbol) throw new Error('ISIN nicht gefunden – bitte das Kürzel eingeben (z. B. SAP.DE).')
+        if (!r?.symbol) throw new Error(t('portfolio.txErrIsinNotFound'))
         isin = symbol
         symbol = r.symbol
         name = r.name ?? name
       }
-      if (!/^[A-Z0-9.\-:]{1,20}$/.test(symbol)) throw new Error('Kürzel fehlt (z. B. AAPL, SAP.DE oder eine ISIN).')
+      if (!/^[A-Z0-9.\-:]{1,20}$/.test(symbol)) throw new Error(t('portfolio.txErrSymbolMissing'))
       let portfolio_id = f.portfolio_id
       if (portfolio_id === 'new' || !portfolio_id) {
         const name = f.newPortfolio.trim()
-        if (!name) throw new Error('Name des neuen Depots fehlt.')
+        if (!name) throw new Error(t('portfolio.errNewDepotNameMissing'))
         const { data, error } = await supabase
           .from('portfolios')
           .insert({ name, position: portfolios.length })
           .select('id')
           .single()
-        if (error) throw new Error(error.code === '23505' ? 'Dieses Depot gibt es schon.' : error.message)
+        if (error) throw new Error(error.code === '23505' ? t('portfolio.depotExists') : error.message)
         portfolio_id = data.id
       }
       const row = {
@@ -104,71 +106,71 @@ export function TxDialog({
         ? await supabase.from('transactions').update(row).eq('id', tx.id)
         : await supabase.from('transactions').insert({ ...row, source: 'manual' })
       if (error) throw new Error(error.message)
-      onSaved(tx ? 'Transaktion gespeichert.' : `${TX_LABEL[f.type]} ${symbol} angelegt.`)
+      onSaved(tx ? t('portfolio.txSaved') : t('portfolio.txCreated', { type: TX_LABEL[f.type], symbol }))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Speichern fehlgeschlagen.')
+      setError(e instanceof Error ? e.message : t('portfolio.saveError'))
       setBusy(false)
     }
   }
 
   async function remove() {
-    if (!tx || !(await confirm({ title: 'Transaktion löschen?', confirmLabel: 'Löschen', danger: true }))) return
+    if (!tx || !(await confirm({ title: t('portfolio.deleteTxTitle'), confirmLabel: t('portfolio.deleteConfirm'), danger: true }))) return
     setBusy(true)
     const { error } = await supabase.from('transactions').delete().eq('id', tx.id)
     if (error) {
-      setError('Löschen fehlgeschlagen.')
+      setError(t('portfolio.deleteError'))
       setBusy(false)
-    } else onSaved('Transaktion gelöscht.')
+    } else onSaved(t('portfolio.txDeleted'))
   }
 
   return (
     <dialog ref={dialog} className="dialog txform" onClose={onClose} aria-labelledby="tx-title">
-      <h2 id="tx-title">{tx ? 'Transaktion bearbeiten' : 'Transaktion erfassen'}</h2>
-      <p className="muted small">Nur Aufzeichnung fürs Portfolio – es wird nichts gehandelt.</p>
+      <h2 id="tx-title">{tx ? t('portfolio.txEditTitle') : t('portfolio.txNewTitle')}</h2>
+      <p className="muted small">{t('portfolio.txDisclaimer')}</p>
       <div className="fgrid">
         <label>
-          Depot
+          {t('portfolio.colDepot')}
           <select value={f.portfolio_id || 'new'} onChange={set('portfolio_id')}>
             {portfolios.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
               </option>
             ))}
-            <option value="new">+ Neues Depot …</option>
+            <option value="new">{t('portfolio.newDepotOption')}</option>
           </select>
         </label>
         {(f.portfolio_id === 'new' || !f.portfolio_id) && (
           <label>
-            Name des Depots
-            <input value={f.newPortfolio} onChange={set('newPortfolio')} placeholder="z. B. Trade Republic" maxLength={60} />
+            {t('portfolio.depotNameLabel')}
+            <input value={f.newPortfolio} onChange={set('newPortfolio')} placeholder={t('portfolio.txDepotPlaceholder')} maxLength={60} />
           </label>
         )}
         <label>
-          Art
+          {t('portfolio.colType')}
           <select value={f.type} onChange={set('type')}>
-            {(Object.keys(TX_LABEL) as TxType[]).map((t) => (
-              <option key={t} value={t}>
-                {TX_LABEL[t]}
+            {(Object.keys(TX_LABEL) as TxType[]).map((type) => (
+              <option key={type} value={type}>
+                {TX_LABEL[type]}
               </option>
             ))}
           </select>
         </label>
         <label>
-          Datum
+          {t('portfolio.colDate')}
           <input type="date" value={f.date} onChange={set('date')} required />
         </label>
         <label className="wide">
-          Wert
+          {t('portfolio.colSecurity')}
           <input
             value={f.symbol}
             onChange={set('symbol')}
-            placeholder="AAPL, SAP.DE, BTC-EUR oder ISIN"
+            placeholder={t('portfolio.txSymbolPlaceholder')}
             disabled={Boolean(fixedSymbol) && !tx}
             autoCapitalize="characters"
           />
         </label>
         <label>
-          {f.type === 'split' ? 'Verhältnis (neu je alt)' : 'Stück'}
+          {f.type === 'split' ? t('portfolio.txSplitRatioLabel') : t('portfolio.colShares')}
           <input inputMode="decimal" value={f.quantity} onChange={set('quantity')} />
         </label>
         {priceLabel && (
@@ -178,25 +180,25 @@ export function TxDialog({
           </label>
         )}
         <label>
-          Währung
+          {t('portfolio.txCurrency')}
           <input value={f.currency} onChange={set('currency')} maxLength={3} autoCapitalize="characters" />
         </label>
         {f.currency.trim().toUpperCase() !== 'EUR' && (
           <label>
-            Kurs {f.currency.toUpperCase()} je EUR
-            <input inputMode="decimal" value={f.fx_rate} onChange={set('fx_rate')} placeholder="leer = EZB heute" />
+            {t('portfolio.txFxRateLabel', { currency: f.currency.toUpperCase() })}
+            <input inputMode="decimal" value={f.fx_rate} onChange={set('fx_rate')} placeholder={t('portfolio.txFxRatePlaceholder')} />
           </label>
         )}
         <label>
-          Gebühren
+          {t('portfolio.colFees')}
           <input inputMode="decimal" value={f.fees} onChange={set('fees')} />
         </label>
         <label>
-          Steuern
+          {t('portfolio.txTaxes')}
           <input inputMode="decimal" value={f.taxes} onChange={set('taxes')} />
         </label>
         <label className="wide">
-          Notiz
+          {t('portfolio.txNote')}
           <input value={f.note} onChange={set('note')} maxLength={500} />
         </label>
       </div>
@@ -204,14 +206,14 @@ export function TxDialog({
       <div className="dialog-actions">
         {tx && (
           <button className="ghost danger-text" onClick={remove} disabled={busy} style={{ marginRight: 'auto' }}>
-            Löschen
+            {t('portfolio.deleteConfirm')}
           </button>
         )}
         <button className="ghost" onClick={() => dialog.current?.close()} disabled={busy}>
-          Abbrechen
+          {t('portfolio.cancel')}
         </button>
         <button className="primary" onClick={save} disabled={busy}>
-          {busy ? 'Speichert …' : 'Speichern'}
+          {busy ? t('portfolio.saving') : t('portfolio.save')}
         </button>
       </div>
     </dialog>

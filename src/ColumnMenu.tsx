@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { COLUMNS, toggleColumn, type ColumnKey, type Columns, type OrderKey } from './lib/columns'
 
 export function ColumnMenu({ cols, onChange }: { cols: Columns; onChange: (c: Columns) => void }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -24,10 +26,10 @@ export function ColumnMenu({ cols, onChange }: { cols: Columns; onChange: (c: Co
   return (
     <div className="menu" ref={box}>
       <button className="ghost" aria-expanded={open} aria-haspopup="true" onClick={() => setOpen((o) => !o)}>
-        Spalten
+        {t('common.columns')}
       </button>
       {open && (
-        <div className="popover" role="group" aria-label="Spalten anzeigen">
+        <div className="popover" role="group" aria-label={t('common.showColumns')}>
           <ColumnList cols={cols} onChange={onChange} />
         </div>
       )}
@@ -36,6 +38,7 @@ export function ColumnMenu({ cols, onChange }: { cols: Columns; onChange: (c: Co
 }
 
 function Item({ c, cols, mobile, onToggle }: { c: (typeof COLUMNS)[number]; cols: Columns; mobile?: boolean; onToggle: () => void }) {
+  const { t } = useTranslation()
   const sortable = useSortable({ id: c.key, disabled: mobile })
   const locked = (c.key === 'symbol' && !cols.name) || (c.key === 'name' && !cols.symbol)
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable
@@ -49,7 +52,7 @@ function Item({ c, cols, mobile, onToggle }: { c: (typeof COLUMNS)[number]; cols
         <button
           type="button"
           className="grip"
-          aria-label={`${c.label} verschieben`}
+          aria-label={t('common.moveColumn', { label: c.label })}
           {...attributes}
           {...listeners}
           onClick={(e) => e.preventDefault()}

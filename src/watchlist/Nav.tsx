@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+import { t } from "../i18n";
 import type { Route } from "../lib/nav";
 
 const ICONS: Record<Route, ReactNode> = {
@@ -23,15 +25,16 @@ const ICONS: Record<Route, ReactNode> = {
   ),
 };
 const TABS: { route: Route; label: string }[] = [
-  { route: "liste", label: "Watchlist" },
-  { route: "portfolio", label: "Portfolio" },
-  { route: "konto", label: "Konto" },
+  { route: "liste", label: t("watchlist.tabWatchlist") },
+  { route: "portfolio", label: t("watchlist.tabPortfolio") },
+  { route: "konto", label: t("watchlist.tabAccount") },
 ];
 
 /** Reiter auf dem Desktop: Watchlist und Portfolio. */
 export function DeskTabs({ route, go }: { route: Route; go: (r: Route) => void }) {
+  const { t } = useTranslation();
   return (
-    <nav className="desktabs" aria-label="Bereiche">
+    <nav className="desktabs" aria-label={t("watchlist.sectionsNav")}>
       {(["liste", "portfolio", "konto"] as const).map((r) => (
         <button
           key={r}
@@ -40,10 +43,10 @@ export function DeskTabs({ route, go }: { route: Route; go: (r: Route) => void }
           onClick={() => go(r)}
         >
           {r === "liste"
-            ? "Watchlist"
+            ? t("watchlist.tabWatchlist")
             : r === "portfolio"
-              ? "Portfolio"
-              : "Konto & Alarme"}
+              ? t("watchlist.tabPortfolio")
+              : t("watchlist.tabAccountAlerts")}
         </button>
       ))}
     </nav>
@@ -52,19 +55,20 @@ export function DeskTabs({ route, go }: { route: Route; go: (r: Route) => void }
 
 /** Feste Navigation unten auf dem Handy. */
 export function BottomNav({ route, go }: { route: Route; go: (r: Route) => void }) {
+  const { t } = useTranslation();
   // Die Suche gehört zur Watchlist (runder Button dort), deshalb bleibt deren Reiter aktiv
   const active = route === "suche" ? "liste" : route;
   return (
-    <nav className="bottomnav" aria-label="Hauptnavigation">
-      {TABS.map((t) => (
+    <nav className="bottomnav" aria-label={t("watchlist.mainNav")}>
+      {TABS.map((tab) => (
         <button
-          key={t.route}
-          className={active === t.route ? "active" : ""}
-          aria-current={active === t.route ? "page" : undefined}
-          onClick={() => go(t.route)}
+          key={tab.route}
+          className={active === tab.route ? "active" : ""}
+          aria-current={active === tab.route ? "page" : undefined}
+          onClick={() => go(tab.route)}
         >
-          <RouteIcon route={t.route} size={24} />
-          <span>{t.label}</span>
+          <RouteIcon route={tab.route} size={24} />
+          <span>{tab.label}</span>
         </button>
       ))}
     </nav>

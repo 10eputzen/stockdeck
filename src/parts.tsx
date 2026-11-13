@@ -1,7 +1,8 @@
-import { LOCALE } from './i18n'
+import { LOCALE, t } from './i18n'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Fragment, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { type Columns, type OrderKey } from './lib/columns'
 import type { Quote, WatchItem } from './lib/supabase'
 import type { Signal } from './lib/signals'
@@ -42,6 +43,7 @@ function Cells({
   by?: string | null
   action?: ReactNode
 }) {
+  const { t } = useTranslation()
   const sym = item?.symbol
   const cell: Record<OrderKey, ReactNode> = {
     symbol: cols.symbol && <span className="cell sym">{sym ?? <Sk w={44} />}</span>,
@@ -49,7 +51,7 @@ function Cells({
       <span className={`cell muted ellipsis ${cols.symbol ? 'hide-sm' : ''}`} title={byTitle(name, by)}>
         {badge && !cols.earnings && <span className="ebadge">{badge}</span>}
         {item ? name : <Sk w="60%" />}
-        {by && <span className="by"> · von {by}</span>}
+        {by && <span className="by"> · {t('detail.byUser', { user: by })}</span>}
       </span>
     ),
     price: cols.price && (
@@ -129,6 +131,7 @@ function MobileCells({
   by?: string | null
   action?: ReactNode
 }) {
+  const { t } = useTranslation()
   const sym = item?.symbol
   const showPill = cols.chg_pct || cols.chg_abs
   return (
@@ -142,7 +145,7 @@ function MobileCells({
         </span>
         <span className="muted small ellipsis" title={byTitle(name, by)}>
           {item ? name : <Sk w="70%" />}
-          {by && <span className="by"> · von {by}</span>}
+          {by && <span className="by"> · {t('detail.byUser', { user: by })}</span>}
         </span>
       </span>
       <span className="mright num">
@@ -219,6 +222,7 @@ export function StockRow({
   narrow?: boolean
   editMode?: boolean
 }) {
+  const { t } = useTranslation()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     data: { type: 'item', container },
@@ -234,7 +238,7 @@ export function StockRow({
       style={{ ...style, transform: CSS.Translate.toString(transform), transition }}
       data-testid={`row-${item.symbol}`}
       {...attributes}
-      aria-roledescription="verschiebbarer Wert"
+      aria-roledescription={t('detail.draggableItem')}
       aria-label={`${item.symbol}${name ? `, ${name}` : ''}`}
       {...listeners}
       onKeyDown={onKeyDown}
@@ -272,7 +276,7 @@ export function StockRow({
 }
 
 const byTitle = (name?: string | null, by?: string | null) =>
-  by ? `${name ?? ''} · hinzugefügt von ${by}` : (name ?? undefined)
+  by ? `${name ?? ''} · ${t('detail.addedByUser', { user: by })}` : (name ?? undefined)
 
 /** Zeile ohne Ziehen, für geteilte Listen; Entfernen wie bei StockRow. */
 export function StaticRow({
@@ -334,11 +338,12 @@ export function StaticRow({
 }
 
 function RemoveButton({ symbol, onRemove, big }: { symbol: string; onRemove: () => void; big?: boolean }) {
+  const { t } = useTranslation()
   return (
     <button
       className={`ghost icon ${big ? 'remove-lg' : ''}`}
-      title={`${symbol} entfernen`}
-      aria-label={`${symbol} entfernen`}
+      title={t('detail.removeSymbol', { symbol })}
+      aria-label={t('detail.removeSymbol', { symbol })}
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => {
         e.stopPropagation()
@@ -405,7 +410,8 @@ export function Logo({ symbol, url, size = 28 }: { symbol: string; url?: string 
 
 /** Sonnenaufgang = vorbörslich, Mond = nachbörslich (statt Text, spart Platz). */
 export function ExtIcon({ session }: { session: 'pre' | 'post' }) {
-  const label = session === 'pre' ? 'Vorbörslich' : 'Nachbörslich'
+  const { t } = useTranslation()
+  const label = session === 'pre' ? t('detail.preMarket') : t('detail.afterHours')
   return (
     <svg className="exticon" viewBox="0 0 24 24" width="12" height="12" role="img" aria-label={label}>
       <title>{label}</title>

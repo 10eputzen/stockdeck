@@ -4,6 +4,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
+import { t } from "../i18n";
 import {
   supabase,
   type Group,
@@ -56,8 +57,8 @@ export function useListActions({
       position: none.length ? none[none.length - 1].position + 1 : 0,
     });
     if (error && error.code !== "23505")
-      setError("Konnte nicht hinzugefügt werden.");
-    else if (narrow) setToast({ text: `${r.symbol} hinzugefügt` });
+      setError(t("watchlist.errAdd"));
+    else if (narrow) setToast({ text: t("watchlist.addedToast", { symbol: r.symbol }) });
     await loadAll();
   }
 
@@ -67,15 +68,15 @@ export function useListActions({
       .from("watchlist_items")
       .delete()
       .eq("id", item.id);
-    if (error) return fail("Konnte nicht entfernt werden.");
+    if (error) return fail(t("watchlist.errRemove"));
     setToast({
-      text: `${item.symbol} entfernt`,
+      text: t("watchlist.removedToast", { symbol: item.symbol }),
       action: {
-        label: "Rückgängig",
+        label: t("watchlist.undo"),
         run: async () => {
           setItems((list) => [...(list ?? []), item]);
           const { error } = await supabase.from("watchlist_items").insert(item);
-          if (error) fail("Wiederherstellen fehlgeschlagen.");
+          if (error) fail(t("watchlist.errRestore"));
         },
       },
     });
@@ -83,9 +84,10 @@ export function useListActions({
 
   async function addGroup() {
     const names = new Set(groups.map((g) => g.name.toLowerCase()));
-    let name = "Neue Gruppe";
+    const baseName = t("watchlist.newGroupDefault");
+    let name = baseName;
     for (let n = 2; names.has(name.toLowerCase()); n++)
-      name = `Neue Gruppe ${n}`;
+      name = `${baseName} ${n}`;
     const position = sortedGroups.length
       ? sortedGroups[sortedGroups.length - 1].position + 1
       : 0;
@@ -94,7 +96,7 @@ export function useListActions({
       .insert({ name, position })
       .select("id, name, position, collapsed")
       .single();
-    if (error) return setError("Gruppe konnte nicht angelegt werden.");
+    if (error) return setError(t("watchlist.errCreateGroup"));
     setGroups((g) => [...g, data]);
     setEditing(data.id);
   }
@@ -110,8 +112,8 @@ export function useListActions({
     if (error)
       fail(
         error.code === "23505"
-          ? `Eine Gruppe „${name}“ gibt es schon.`
-          : "Umbenennen fehlgeschlagen.",
+          ? t("watchlist.errGroupExists", { name })
+          : t("watchlist.errRename"),
       );
   }
 
@@ -124,15 +126,15 @@ export function useListActions({
       .from("watchlist_groups")
       .update({ collapsed })
       .eq("id", g.id);
-    if (error) fail("Konnte nicht gespeichert werden.");
+    if (error) fail(t("watchlist.errSave"));
   }
 
   async function deleteGroup(g: Group) {
     const moved = lists[g.id] ?? [];
     const ok = await confirm({
-      title: `Gruppe „${g.name}“ löschen?`,
-      message: moved.length ? `Die ${moved.length} Werte landen unter „Ohne Gruppe“.` : undefined,
-      confirmLabel: "Löschen",
+      title: t("watchlist.deleteGroupConfirmTitle", { name: g.name }),
+      message: moved.length ? t("watchlist.deleteGroupConfirmMoved", { count: moved.length }) : undefined,
+      confirmLabel: t("watchlist.delete"),
       danger: true,
     });
     if (!ok) return;
@@ -150,7 +152,7 @@ export function useListActions({
     ]);
     const r1 = await persistContainer(NONE, next);
     const r2 = await supabase.from("watchlist_groups").delete().eq("id", g.id);
-    if (r1.error || r2.error) fail("Gruppe konnte nicht gelöscht werden.");
+    if (r1.error || r2.error) fail(t("watchlist.errDeleteGroup"));
   }
 
   return {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { SharedList } from "../lib/supabase";
 
 const APP_URL = import.meta.env.VITE_SITE_URL || location.origin;
@@ -21,6 +22,7 @@ export function ShareDialog({
   onLeave: () => Promise<boolean>;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     dialog.current?.showModal();
@@ -37,13 +39,13 @@ export function ShareDialog({
     setBusy(false);
     if (err) return setMsg({ text: err, error: true });
     setEmail("");
-    setMsg({ text: `${e.toLowerCase()} eingeladen. Schick ihr oder ihm den Link zur App.` });
+    setMsg({ text: t("watchlist.invitedMsg", { email: e.toLowerCase() }) });
   }
 
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(APP_URL);
-      setMsg({ text: "Link kopiert." });
+      setMsg({ text: t("watchlist.linkCopied") });
     } catch {
       setMsg({ text: APP_URL });
     }
@@ -51,11 +53,11 @@ export function ShareDialog({
 
   return (
     <dialog ref={dialog} className="dialog share" onClose={onClose} aria-labelledby="share-title">
-      <h2 id="share-title">„{list.name}“ teilen</h2>
+      <h2 id="share-title">{t("watchlist.shareDialogTitle", { name: list.name })}</h2>
       <p className="muted small">
         {isOwner
-          ? "Eingeladene melden sich mit diesem Google-Konto in Stockdeck an und können die Liste mit dir bearbeiten. Dein Portfolio und deine übrigen Gruppen sehen sie nicht. Stockdeck verschickt keine Mail."
-          : `${list.owner_name} hat diese Liste mit dir geteilt. Alle hier können Werte hinzufügen und entfernen.`}
+          ? t("watchlist.shareOwnerHint")
+          : t("watchlist.shareMemberHint", { owner: list.owner_name })}
       </p>
 
       {isOwner && (
@@ -68,8 +70,8 @@ export function ShareDialog({
         >
           <input
             type="email"
-            placeholder="E-Mail-Adresse (Google-Konto)"
-            aria-label="E-Mail-Adresse"
+            placeholder={t("watchlist.emailPlaceholder")}
+            aria-label={t("watchlist.emailLabel")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             maxLength={254}
@@ -77,15 +79,15 @@ export function ShareDialog({
             required
           />
           <button className="primary" disabled={busy || !email.trim()}>
-            Einladen
+            {t("watchlist.invite")}
           </button>
         </form>
       )}
 
       <ul className="members">
         <li>
-          <span className="ellipsis">{isOwner ? "Du" : list.owner_name}</span>
-          <span className="muted small">Besitzer</span>
+          <span className="ellipsis">{isOwner ? t("watchlist.you") : list.owner_name}</span>
+          <span className="muted small">{t("watchlist.owner")}</span>
         </li>
         {list.members.map((m) => (
           <li key={m.email}>
@@ -93,14 +95,14 @@ export function ShareDialog({
             {isOwner ? (
               <button
                 className="ghost icon danger"
-                aria-label={`${m.email} entfernen`}
-                title="Entfernen"
+                aria-label={t("watchlist.removeMemberAria", { email: m.email })}
+                title={t("watchlist.removeMemberTitle")}
                 onClick={() => onRemoveMember(m.email)}
               >
                 ×
               </button>
             ) : (
-              <span className="muted small">Mitglied</span>
+              <span className="muted small">{t("watchlist.member")}</span>
             )}
           </li>
         ))}
@@ -117,7 +119,7 @@ export function ShareDialog({
             style={{ marginRight: "auto" }}
             onClick={async () => (await onUnshare()) && dialog.current?.close()}
           >
-            Teilen beenden
+            {t("watchlist.stopSharing")}
           </button>
         ) : (
           <button
@@ -125,16 +127,16 @@ export function ShareDialog({
             style={{ marginRight: "auto" }}
             onClick={async () => (await onLeave()) && dialog.current?.close()}
           >
-            Liste verlassen
+            {t("watchlist.leaveList")}
           </button>
         )}
         {isOwner && (
           <button className="ghost" onClick={copyLink}>
-            Link kopieren
+            {t("watchlist.copyLink")}
           </button>
         )}
         <button className="ghost" onClick={() => dialog.current?.close()}>
-          Schließen
+          {t("watchlist.close")}
         </button>
       </div>
     </dialog>

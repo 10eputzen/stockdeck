@@ -1,4 +1,4 @@
-import { LOCALE } from '../i18n'
+import { LOCALE, t } from '../i18n'
 import { THEME_EVENT } from '../lib/theme'
 import {
   AreaSeries,
@@ -15,6 +15,7 @@ import {
   type UTCTimestamp,
 } from 'lightweight-charts'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { money, pct } from '../lib/format'
 import {
   fetchChart,
@@ -25,14 +26,14 @@ import {
 import { dirOf } from '../lib/format'
 
 const RANGES: { r: ChartRange; label: string }[] = [
-  { r: '1d', label: '1T' },
-  { r: '5d', label: '5T' },
-  { r: '1mo', label: '1M' },
-  { r: '6mo', label: '6M' },
-  { r: 'ytd', label: 'YTD' },
-  { r: '1y', label: '1J' },
-  { r: '5y', label: '5J' },
-  { r: 'max', label: 'Max' },
+  { r: '1d', label: t('detail.range1d') },
+  { r: '5d', label: t('detail.range5d') },
+  { r: '1mo', label: t('detail.range1mo') },
+  { r: '6mo', label: t('detail.range6mo') },
+  { r: 'ytd', label: t('detail.rangeYtd') },
+  { r: '1y', label: t('detail.range1y') },
+  { r: '5y', label: t('detail.range5y') },
+  { r: 'max', label: t('detail.rangeMax') },
 ]
 const INTRADAY = new Set(['5m', '15m', '60m'])
 /** Nur US-Werte haben Termine und volle Kennzahlen (Finnhub Free). */
@@ -103,6 +104,7 @@ function paintSeries(s: Series, d: ChartData): number | null {
 }
 
 export function PriceChart({ symbol, currency }: { symbol: string; currency?: string | null }) {
+  const { t } = useTranslation()
   // Der Chart wird einmal angelegt; die Währung kommt evtl. erst mit dem Kurs
   const curRef = useRef(currency)
   useEffect(() => {
@@ -259,7 +261,7 @@ export function PriceChart({ symbol, currency }: { symbol: string; currency?: st
   const intraday = meta?.intraday ?? true
   return (
     <div className="chartwrap">
-      <div className="ranges" role="group" aria-label="Zeitraum">
+      <div className="ranges" role="group" aria-label={t('detail.chartTimeframe')}>
         {RANGES.map((x) => (
           <button key={x.r} className={x.r === range ? 'active' : ''} aria-pressed={x.r === range} onClick={() => setRange(x.r)}>
             {x.label}
@@ -273,25 +275,30 @@ export function PriceChart({ symbol, currency }: { symbol: string; currency?: st
               <span className="muted">{fmtTime(intraday).format(new Date((Number(legend.time) + (meta?.gmtoffset ?? 0)) * 1000))}</span>{' '}
               {kind === 'candle' ? (
                 <>
-                  O {legend.o.toFixed(2)} H {legend.h.toFixed(2)} T {legend.l.toFixed(2)} S {legend.c.toFixed(2)}
+                  {t('detail.ohlc', {
+                    o: legend.o.toFixed(2),
+                    h: legend.h.toFixed(2),
+                    l: legend.l.toFixed(2),
+                    c: legend.c.toFixed(2),
+                  })}
                 </>
               ) : (
                 money(currency).format(legend.c)
               )}{' '}
-              <span className="muted">Vol {compact.format(legend.v)}</span>
+              <span className="muted">{t('detail.volumeShort', { v: compact.format(legend.v) })}</span>
             </>
           ) : (
             ' '
           )}
         </span>
         {change != null && <span className={`legend-chg ${dirOf(change)}`}>{pct.format(change)}</span>}
-        <span className="kind" role="group" aria-label="Darstellung">
-          <button className={kind === 'line' ? 'active' : ''} aria-pressed={kind === 'line'} onClick={() => setKind('line')} title="Linie">
+        <span className="kind" role="group" aria-label={t('detail.chartType')}>
+          <button className={kind === 'line' ? 'active' : ''} aria-pressed={kind === 'line'} onClick={() => setKind('line')} title={t('detail.chartLine')}>
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
               <path d="M3 17l5-6 4 3 6-8 3 3" />
             </svg>
           </button>
-          <button className={kind === 'candle' ? 'active' : ''} aria-pressed={kind === 'candle'} onClick={() => setKind('candle')} title="Kerzen">
+          <button className={kind === 'candle' ? 'active' : ''} aria-pressed={kind === 'candle'} onClick={() => setKind('candle')} title={t('detail.chartCandles')}>
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
               <path d="M7 3v4M7 15v6M17 3v8M17 17v4" />
               <rect x="5" y="7" width="4" height="8" rx="1" />
@@ -303,11 +310,11 @@ export function PriceChart({ symbol, currency }: { symbol: string; currency?: st
       <div className="chartbox">
         <div ref={box} className="chart" data-testid="chart" />
         {loading && <div className="chart-cover sk" aria-hidden="true" />}
-        {error && !loading && <p className="chart-cover msg muted">Kursverlauf gerade nicht verfügbar.</p>}
-        {!loading && !error && meta?.empty && <p className="chart-cover msg muted">Keine Kursdaten für diesen Zeitraum.</p>}
+        {error && !loading && <p className="chart-cover msg muted">{t('detail.chartUnavailable')}</p>}
+        {!loading && !error && meta?.empty && <p className="chart-cover msg muted">{t('detail.chartNoData')}</p>}
       </div>
       <p className="muted tiny">
-        Kursdaten von Yahoo, Zeiten in New Yorker Ortszeit. Chart:{' '}
+        {t('detail.chartAttribution')}{' '}
         <a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">
           TradingView Lightweight Charts™
         </a>{' '}

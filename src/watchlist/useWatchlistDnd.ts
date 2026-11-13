@@ -19,6 +19,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
+import { t } from "../i18n";
 import { supabase, type Group, type WatchItem } from "../lib/supabase";
 import { byPos, containerOf, NONE, persistContainer } from "./model";
 
@@ -126,7 +127,7 @@ export function useWatchlistDnd({
     });
     if (error) {
       setGroups(start);
-      setError("Reihenfolge konnte nicht gespeichert werden.");
+      setError(t("watchlist.errReorder"));
     }
   }
 
@@ -171,7 +172,7 @@ export function useWatchlistDnd({
     ]);
     if (results.some((r) => r.error)) {
       setItems(start);
-      setError("Verschieben konnte nicht gespeichert werden.");
+      setError(t("watchlist.errMove"));
     }
   }
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { t } from "../i18n";
 import { readCache, writeCache } from "../lib/cache";
 import {
   fetchEvents,
@@ -105,7 +106,7 @@ export function useWatchlistData(userId: string) {
       setUpdated(new Date());
       setError(null);
     } catch {
-      setError("Kurse konnten nicht geladen werden.");
+      setError(t("watchlist.errLoadQuotes"));
     } finally {
       setPending((n) => n - 1);
     }
@@ -132,7 +133,7 @@ export function useWatchlistData(userId: string) {
         .order("position"),
     ]);
     if (it.error || gr.error) {
-      setError("Watchlist konnte nicht geladen werden.");
+      setError(t("watchlist.errLoadWatchlist"));
       setItems((old) => old ?? []);
       return;
     }
@@ -196,7 +197,7 @@ export function useWatchlistData(userId: string) {
       // Netzfehler: beim Stand aus dem Cache bleiben statt „Kein Zugang“ zu zeigen
       if (error) {
         setItems((old) => old ?? []);
-        setError("Keine Verbindung. Angezeigt wird der letzte Stand.");
+        setError(t("watchlist.errOfflineCached"));
         return;
       }
       setAllowed(data === true);

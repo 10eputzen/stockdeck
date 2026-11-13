@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { supabase, type Group, type WatchItem } from './lib/supabase'
 import { parseTradingView } from './lib/tradingview'
 
@@ -16,6 +17,7 @@ export function ImportDialog({
   onClose: () => void
   onDone: (summary: string) => void
 }) {
+  const { t } = useTranslation()
   const dialog = useRef<HTMLDialogElement>(null)
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -32,7 +34,7 @@ export function ImportDialog({
   const tooMany = items.length + fresh.length > MAX_IMPORT
 
   async function readFile(file: File) {
-    if (file.size > 200_000) return setError('Datei ist zu groß (max. 200 KB).')
+    if (file.size > 200_000) return setError(t('portfolio.tvFileTooLarge'))
     setError(null)
     setText(await file.text())
   }
@@ -73,25 +75,30 @@ export function ImportDialog({
         if (error) throw error
       }
       onDone(
-        `Import fertig: ${rows.length} neu, ${newGroups.length} Gruppen angelegt, ${dupes.length} schon vorhanden, ${parsed.unsupported.length} übersprungen.`,
+        t('portfolio.tvDone', {
+          added: rows.length,
+          groups: newGroups.length,
+          existing: dupes.length,
+          skipped: parsed.unsupported.length,
+        }),
       )
     } catch (e) {
       console.error(e)
-      setError('Import fehlgeschlagen. Nichts Doppeltes angelegt, bitte erneut versuchen.')
+      setError(t('portfolio.tvError'))
       setBusy(false)
     }
   }
 
   return (
     <dialog ref={dialog} className="dialog" onClose={onClose} aria-labelledby="import-title">
-      <h2 id="import-title">TradingView-Liste importieren</h2>
+      <h2 id="import-title">{t('portfolio.tvTitle')}</h2>
       <p className="muted small">
-        In TradingView: Menü der Watchlist → „Liste exportieren“. Datei wählen oder Inhalt einfügen.
+        {t('portfolio.tvHint')}
       </p>
       <input
         type="file"
         accept=".txt,text/plain"
-        aria-label="Datei wählen"
+        aria-label={t('portfolio.chooseFile')}
         onChange={(e) => e.target.files?.[0] && readFile(e.target.files[0])}
       />
       <textarea
@@ -99,21 +106,21 @@ export function ImportDialog({
         onChange={(e) => setText(e.target.value)}
         placeholder="###Tech,NASDAQ:NVDA,NASDAQ:MSFT,###China,NASDAQ:BIDU"
         rows={4}
-        aria-label="Inhalt der Exportdatei"
+        aria-label={t('portfolio.tvContentAria')}
       />
 
       {text.trim() && (
         <div className="preview" aria-live="polite">
           <p>
-            <strong>{fresh.length}</strong> neu · <strong>{dupes.length}</strong> schon vorhanden ·{' '}
-            <strong>{parsed.unsupported.length}</strong> nicht unterstützt
+            <strong>{fresh.length}</strong> {t('portfolio.tvNewLabel')} · <strong>{dupes.length}</strong> {t('portfolio.tvExistingLabel')} ·{' '}
+            <strong>{parsed.unsupported.length}</strong> {t('portfolio.tvUnsupportedLabel')}
           </p>
           <ul>
             {parsed.groups.map((g) => (
               <li key={g.name ?? '__none'}>
-                <span className="sym">{g.name ?? 'Ohne Gruppe'}</span>{' '}
+                <span className="sym">{g.name ?? t('portfolio.tvNoGroup')}</span>{' '}
                 {g.name && !groups.some((x) => x.name.toLowerCase() === g.name?.toLowerCase()) && (
-                  <span className="badge">neue Gruppe</span>
+                  <span className="badge">{t('portfolio.tvNewGroupBadge')}</span>
                 )}
                 <div className="chips">
                   {g.symbols.map((s) => (
@@ -126,7 +133,7 @@ export function ImportDialog({
             ))}
             {parsed.unsupported.length > 0 && (
               <li>
-                <span className="sym">Nicht unterstützt</span>
+                <span className="sym">{t('portfolio.tvUnsupportedHeading')}</span>
                 <div className="chips">
                   {parsed.unsupported.map((u) => (
                     <span key={u.raw} className="chip bad" title={u.reason}>
@@ -140,14 +147,14 @@ export function ImportDialog({
         </div>
       )}
 
-      {tooMany && <p className="error small">Mehr als {MAX_IMPORT} Werte insgesamt sind nicht möglich.</p>}
+      {tooMany && <p className="error small">{t('portfolio.tvTooMany', { max: MAX_IMPORT })}</p>}
       {error && <p className="error small">{error}</p>}
       <div className="dialog-actions">
         <button className="ghost" onClick={() => dialog.current?.close()} disabled={busy}>
-          Abbrechen
+          {t('portfolio.cancel')}
         </button>
         <button className="primary" onClick={run} disabled={busy || fresh.length === 0 || tooMany}>
-          {busy ? 'Importiere …' : `${fresh.length} Werte importieren`}
+          {busy ? t('portfolio.tvImporting') : t('portfolio.tvImportCount', { count: fresh.length })}
         </button>
       </div>
     </dialog>

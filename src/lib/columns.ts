@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useState } from 'react'
+import { t } from '../i18n'
 import { readCache, writeCache } from './cache'
 import { supabase } from './supabase'
 
 export type ColumnKey = 'logo' | 'symbol' | 'name' | 'price' | 'ext' | 'chg_abs' | 'chg_pct' | 'range' | 'analyst' | 'earnings'
 
 export const COLUMNS: { key: ColumnKey; label: string; hint?: string }[] = [
-  { key: 'logo', label: 'Logo' },
-  { key: 'symbol', label: 'Kürzel' },
-  { key: 'name', label: 'Name', hint: 'Handy: nur ohne Kürzel' },
-  { key: 'price', label: 'Kurs' },
-  { key: 'ext', label: 'Vor-/Nachbörse', hint: 'unter dem Kurs' },
-  { key: 'chg_abs', label: 'Heute $', hint: 'nicht auf dem Handy' },
-  { key: 'chg_pct', label: 'Heute %' },
-  { key: 'range', label: 'Tagesspanne', hint: 'nicht auf dem Handy' },
-  { key: 'analyst', label: 'Analysten', hint: 'Konsens und Kursziel' },
-  { key: 'earnings', label: 'Nächste Zahlen', hint: 'nicht auf dem Handy' },
+  { key: 'logo', label: t('common.colLogo') },
+  { key: 'symbol', label: t('common.colSymbol') },
+  { key: 'name', label: t('common.colName'), hint: t('common.colNameHint') },
+  { key: 'price', label: t('common.colPrice') },
+  { key: 'ext', label: t('common.colExt'), hint: t('common.colExtHint') },
+  { key: 'chg_abs', label: t('common.colChgAbs'), hint: t('common.colDesktopOnlyHint') },
+  { key: 'chg_pct', label: t('common.colChgPct') },
+  { key: 'range', label: t('common.colRange'), hint: t('common.colDesktopOnlyHint') },
+  { key: 'analyst', label: t('common.colAnalyst'), hint: t('common.colAnalystHint') },
+  { key: 'earnings', label: t('common.colEarnings'), hint: t('common.colDesktopOnlyHint') },
 ]
 
 /** Spalten mit eigener Zelle, in der Reihenfolge der Liste (Logo links und Entfernen rechts bleiben fest). */

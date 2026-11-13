@@ -1,5 +1,6 @@
 import { LOCALE } from '../i18n'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   fetchNews,
   type NewsItem,
@@ -18,6 +19,7 @@ function ago(iso: string) {
 }
 
 export function News({ symbol, logo }: { symbol: string; logo?: string | null }) {
+  const { t } = useTranslation()
   const [news, setNews] = useState<NewsItem[] | null>(null)
   const [total, setTotal] = useState(0)
   const [more, setMore] = useState<'idle' | 'busy' | 'error'>('idle')
@@ -39,7 +41,7 @@ export function News({ symbol, logo }: { symbol: string; logo?: string | null })
     }
   }, [symbol])
 
-  if (error) return <p className="muted">News gerade nicht verfügbar.</p>
+  if (error) return <p className="muted">{t('detail.newsUnavailable')}</p>
   if (!news)
     return (
       <ul className="news" aria-busy="true">
@@ -67,7 +69,7 @@ export function News({ symbol, logo }: { symbol: string; logo?: string | null })
       () => setMore('error'),
     )
   }
-  if (news.length === 0) return <p className="muted">Keine News der letzten sieben Tage.</p>
+  if (news.length === 0) return <p className="muted">{t('detail.newsEmpty')}</p>
   return (
     <>
     <ul className="news">
@@ -88,7 +90,7 @@ export function News({ symbol, logo }: { symbol: string; logo?: string | null })
     </ul>
     {news.length < total && (
       <button className="ghost more" onClick={loadMore} disabled={more === 'busy'}>
-        {more === 'busy' ? 'Lädt …' : more === 'error' ? 'Nochmal versuchen' : `Weitere News (${total - news.length})`}
+        {more === 'busy' ? t('detail.loading') : more === 'error' ? t('detail.retry') : t('detail.moreNews', { count: total - news.length })}
       </button>
     )}
     </>

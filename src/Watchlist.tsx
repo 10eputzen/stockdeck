@@ -11,6 +11,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { ImportDialog } from "./ImportDialog";
 import { COL_GAP, gridTemplate, useColumns } from "./lib/columns";
 import type { SharedItem, WatchItem } from "./lib/supabase";
@@ -63,6 +64,7 @@ export function Watchlist({
   email?: string;
   onSignOut: () => void;
 }) {
+  const { t } = useTranslation();
   const narrow = useNarrow();
   const { loc, go, open, back } = useLocation();
   const route = loc.route;
@@ -156,9 +158,9 @@ export function Watchlist({
   if (allowed === false)
     return (
       <section className="login">
-        <h1>Kein Zugang</h1>
+        <h1>{t("watchlist.noAccessTitle")}</h1>
         <p className="muted">
-          Dieses Konto ist für Stockdeck noch nicht freigeschaltet.
+          {t("watchlist.noAccessText")}
         </p>
       </section>
     );
@@ -389,7 +391,7 @@ export function Watchlist({
               <section className="group">
                 {sortedGroups.length > 0 && (
                   <div className="grouphead">
-                    <span className="groupname static">Ohne Gruppe</span>
+                    <span className="groupname static">{t("watchlist.ungrouped")}</span>
                     <span className="muted small-count">
                       {lists[NONE].length}
                     </span>
@@ -418,8 +420,8 @@ export function Watchlist({
             {(items ?? []).length === 0 && sortedGroups.length === 0 && sharedLists.length === 0 && (
               <p className="empty muted">
                 {narrow
-                  ? "Noch leer. Tippe oben auf die Lupe, um eine Aktie hinzuzufügen."
-                  : "Noch leer. Füge oben eine Aktie hinzu oder importiere eine Liste."}
+                  ? t("watchlist.emptyMobile")
+                  : t("watchlist.emptyDesktop")}
               </p>
             )}
             <DragOverlay dropAnimation={null}>
@@ -445,9 +447,9 @@ export function Watchlist({
       <p className={`small ${error ? "error" : "muted"}`}>
         {error ??
           (refreshing
-            ? "Aktualisiere …"
+            ? t("watchlist.refreshing")
             : updated
-            ? `Aktualisiert ${time.format(updated)} · Kurse von Finnhub (US-Börsen), vor-/nachbörslich von Yahoo`
+            ? t("watchlist.updatedAt", { time: time.format(updated) })
             : " ")}
       </p>
       {dialogs}

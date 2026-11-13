@@ -1,24 +1,26 @@
 import type React from 'react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { eur, eurSigned, money, pct } from '../lib/format'
 import type { Position, Totals } from '../lib/supabase'
 import { Logo, Sk } from '../parts'
 import { pfDir as dirOf, qty, share } from './format'
 
 export function PfMenu({ onRename, onDelete }: { onRename: () => void; onDelete: () => void }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   return (
     <span className="pf-menu">
-      <button className="ghost icon" aria-label="Depot-Menü" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+      <button className="ghost icon" aria-label={t('portfolio.depotMenu')} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         ⋮
       </button>
       {open && (
         <span className="pf-pop" role="menu" onMouseLeave={() => setOpen(false)}>
           <button role="menuitem" onClick={() => (setOpen(false), onRename())}>
-            Umbenennen
+            {t('portfolio.rename')}
           </button>
           <button role="menuitem" className="danger-text" onClick={() => (setOpen(false), onDelete())}>
-            Löschen
+            {t('portfolio.deleteConfirm')}
           </button>
         </span>
       )}
@@ -26,19 +28,20 @@ export function PfMenu({ onRename, onDelete }: { onRename: () => void; onDelete:
   )
 }
 
-export function TotalsCard({ t }: { t?: Totals }) {
+export function TotalsCard({ t: tot }: { t?: Totals }) {
+  const { t } = useTranslation()
   return (
-    <div className="pf-totals mcard" aria-busy={!t}>
+    <div className="pf-totals mcard" aria-busy={!tot}>
       <div>
-        <span className="lbl">Gesamtwert</span>
-        <span className="big num">{t ? eur.format(t.value) : <Sk w={140} />}</span>
+        <span className="lbl">{t('portfolio.totalValue')}</span>
+        <span className="big num">{tot ? eur.format(tot.value) : <Sk w={140} />}</span>
       </div>
       <div>
-        <span className="lbl">Heute</span>
-        <span className={`num ${dirOf(t?.day)}`}>
-          {t ? (
+        <span className="lbl">{t('portfolio.today')}</span>
+        <span className={`num ${dirOf(tot?.day)}`}>
+          {tot ? (
             <>
-              {eurSigned.format(t.day)} {t.day_pct != null && <span className="small">({pct.format(t.day_pct)})</span>}
+              {eurSigned.format(tot.day)} {tot.day_pct != null && <span className="small">({pct.format(tot.day_pct)})</span>}
             </>
           ) : (
             <Sk w={90} />
@@ -46,11 +49,11 @@ export function TotalsCard({ t }: { t?: Totals }) {
         </span>
       </div>
       <div>
-        <span className="lbl">Gewinn/Verlust</span>
-        <span className={`num ${dirOf(t?.gain)}`}>
-          {t ? (
+        <span className="lbl">{t('portfolio.gainLoss')}</span>
+        <span className={`num ${dirOf(tot?.gain)}`}>
+          {tot ? (
             <>
-              {eurSigned.format(t.gain)} {t.gain_pct != null && <span className="small">({pct.format(t.gain_pct)})</span>}
+              {eurSigned.format(tot.gain)} {tot.gain_pct != null && <span className="small">({pct.format(tot.gain_pct)})</span>}
             </>
           ) : (
             <Sk w={90} />
@@ -58,8 +61,8 @@ export function TotalsCard({ t }: { t?: Totals }) {
         </span>
       </div>
       <div>
-        <span className="lbl">Einstand</span>
-        <span className="num">{t ? eur.format(t.cost) : <Sk w={90} />}</span>
+        <span className="lbl">{t('portfolio.costBasis')}</span>
+        <span className="num">{tot ? eur.format(tot.cost) : <Sk w={90} />}</span>
       </div>
     </div>
   )
@@ -69,16 +72,17 @@ export function TotalsCard({ t }: { t?: Totals }) {
 const dayPct = (r: Position) => (r.day != null && r.value != null && r.value - r.day > 0 ? r.day / (r.value - r.day) : null)
 
 export function PosHead({ mode }: { mode: Mode }) {
+  const { t } = useTranslation()
   return (
     <div className="row head pf-row" aria-hidden="true">
       <span />
-      <span>Wert</span>
-      <span className="num">Stück</span>
-      <span className="num">Ø Einstand</span>
-      <span className="num">Kurs</span>
-      <span className="num">Wert €</span>
-      <span className="num">{mode === 'day' ? 'Heute' : 'G/V'}</span>
-      <span className="num">Anteil</span>
+      <span>{t('portfolio.colSecurity')}</span>
+      <span className="num">{t('portfolio.colShares')}</span>
+      <span className="num">{t('portfolio.avgCost')}</span>
+      <span className="num">{t('portfolio.colPrice')}</span>
+      <span className="num">{t('portfolio.colValueEur')}</span>
+      <span className="num">{mode === 'day' ? t('portfolio.today') : t('portfolio.colGainLossShort')}</span>
+      <span className="num">{t('portfolio.colWeight')}</span>
     </div>
   )
 }
@@ -104,6 +108,7 @@ export function PosRow({
   name?: string | null
   onOpen?: () => void
 }) {
+  const { t } = useTranslation()
   const label = name ?? r?.name ?? r?.symbol
   const avg = r && r.quantity > 0 ? r.cost / r.quantity : null
   const open = (e: { key?: string } | React.MouseEvent) => {
@@ -115,13 +120,13 @@ export function PosRow({
         {r ? <Logo symbol={r.symbol} url={logo} size={36} /> : <span className="logo lg sk" />}
         <span className="mstack">
           <span className="sym ellipsis">{r ? label : <Sk w={90} />}</span>
-          <span className="muted small ellipsis">{r ? `${qty.format(r.quantity)} Stk · Ø ${eur.format(avg ?? 0)}` : <Sk w="70%" />}</span>
+          <span className="muted small ellipsis">{r ? t('portfolio.mobileQtyAvg', { qty: qty.format(r.quantity), avg: eur.format(avg ?? 0) }) : <Sk w="70%" />}</span>
         </span>
         <span className="mright num">
           <span className="mprice">{r ? (r.value == null ? '–' : eur.format(r.value)) : <Sk w={64} />}</span>
           {r ? (
             <span className={`pill ${dirOf(change(r, mode).abs)}`}>
-              {change(r, mode).abs == null ? 'kein Kurs' : `${eurSigned.format(change(r, mode).abs!)} · ${change(r, mode).pc == null ? '' : pct.format(change(r, mode).pc!)}`}
+              {change(r, mode).abs == null ? t('portfolio.noQuote') : `${eurSigned.format(change(r, mode).abs!)} · ${change(r, mode).pc == null ? '' : pct.format(change(r, mode).pc!)}`}
             </span>
           ) : (
             <Sk w={72} />

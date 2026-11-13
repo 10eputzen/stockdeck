@@ -1,3 +1,4 @@
+import { lang, t } from '../i18n'
 import { supabase } from './supabase'
 
 /** Öffentlicher VAPID-Schlüssel (der private liegt nur in den Supabase-Secrets). */
@@ -19,11 +20,11 @@ export type AlertRule = {
 export type AlertEvent = { id: string; kind: AlertKind; symbol: string; title: string; body: string; pushed: number; created_at: string }
 
 export const KIND_LABEL: Record<AlertKind, string> = {
-  price_above: 'Kurs über',
-  price_below: 'Kurs unter',
-  change_pct_day: 'Tagesbewegung ab ±',
-  finanzplan_gain: 'Finanzplan: Gewinn',
-  finanzplan_stop: 'Finanzplan: Stop',
+  price_above: t('common.alertPriceAbove'),
+  price_below: t('common.alertPriceBelow'),
+  change_pct_day: t('common.alertChangePctDay'),
+  finanzplan_gain: t('common.alertFinanzplanGain'),
+  finanzplan_stop: t('common.alertFinanzplanStop'),
 }
 
 export const RULE_COLS = 'id, kind, symbol, threshold, params, active, note, created_at'
@@ -50,7 +51,7 @@ function keyBytes(b64: string) {
 
 /** Erlaubnis holen, Gerät abonnieren und das Abo in der Datenbank ablegen. */
 export async function enablePush(): Promise<void> {
-  if ((await Notification.requestPermission()) !== 'granted') throw new Error('Benachrichtigungen wurden nicht erlaubt.')
+  if ((await Notification.requestPermission()) !== 'granted') throw new Error(t('common.notificationsNotAllowed'))
   const reg = await navigator.serviceWorker.ready
   const sub =
     (await reg.pushManager.getSubscription()) ??
@@ -62,6 +63,7 @@ export async function enablePush(): Promise<void> {
     p256dh: j.keys?.p256dh,
     auth: j.keys?.auth,
     device: navigator.userAgent.slice(0, 200),
+    lang,
   })
   if (error) throw new Error(error.message)
 }
@@ -76,7 +78,16 @@ export async function disablePush(): Promise<void> {
 
 /** Testnachricht an alle eigenen Geräte; liefert die Zahl der erreichten Geräte. */
 export async function sendTestPush(): Promise<number> {
-  const { data, error } = await supabase.functions.invoke('alerts', { body: { action: 'test' } })
+  const { data, error } = await supabase.functions.invoke('alerts', { body: { action: 'test', lang } })
   if (error) throw error
   return (data as { sent: number }).sent
+}
+
+/** Nach einem Sprachwechsel: Push-Texte dieses Geräts in der neuen Sprache. */
+export async function syncPushLang(): Promise<void> {
+  if (!('serviceWorker' in navigator)) return
+  const reg = await navigator.serviceWorker.getRegistration()
+  const sub = await reg?.pushManager.getSubscription()
+  if (!sub) return
+  await supabase.from('push_subscriptions').update({ lang }).eq('endpoint', sub.endpoint).neq('lang', lang)
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { holdings, sum, valuate } from '../supabase/functions/_shared/positions.ts'
 import { CsvImport } from './CsvImport'
 import { readCache, writeCache } from './lib/cache'
@@ -30,6 +31,7 @@ type Data = {
 
 /** Depots, Transaktionen, Kurse und EZB-Kurse laden; der letzte Stand liegt sofort aus dem Cache vor. */
 function usePortfolio(userId: string) {
+  const { t } = useTranslation()
   const key = `pf1:${userId}`
   const [data, setData] = useState<Data | null>(() => readCache<Data>(key))
   const [error, setError] = useState<string | null>(null)
@@ -41,7 +43,7 @@ function usePortfolio(userId: string) {
       fetchFx().catch(() => null),
     ])
     if (pf.error || tx.error) {
-      setError('Portfolio konnte nicht geladen werden.')
+      setError(t('portfolio.loadError'))
       return
     }
     const txs = tx.data as Transaction[]
@@ -61,7 +63,7 @@ function usePortfolio(userId: string) {
       quotes: { ...(old?.quotes ?? {}), ...Object.fromEntries(qs.map((q) => [q.symbol, q])) },
       profiles: { ...(old?.profiles ?? {}), ...Object.fromEntries(ps.map((p) => [p.symbol, p])) },
     }))
-  }, [key])
+  }, [key, t])
   const load = useCallback(async () => {
     setRefreshing(true)
     try {
@@ -90,6 +92,7 @@ export function PortfolioPage({
   onOpen: (symbol: string) => void
   onToast: (text: string) => void
 }) {
+  const { t } = useTranslation()
   const { data, setData, error, load, refreshing } = usePortfolio(userId)
   const [mode, setMode] = useState<Mode>(() => {
     try {
@@ -119,24 +122,24 @@ export function PortfolioPage({
     await supabase.from('portfolios').update({ collapsed: !p.collapsed }).eq('id', p.id)
   }
   async function addPortfolio() {
-    const name = (await prompt({ title: 'Neues Depot', label: 'Name', confirmLabel: 'Anlegen' }))?.trim()
+    const name = (await prompt({ title: t('portfolio.newDepotTitle'), label: t('portfolio.nameLabel'), confirmLabel: t('portfolio.createConfirm') }))?.trim()
     if (!name) return
     const { error } = await supabase.from('portfolios').insert({ name: name.slice(0, 60), position: data?.portfolios.length ?? 0 })
-    onToast(error ? (error.code === '23505' ? 'Dieses Depot gibt es schon.' : 'Depot konnte nicht angelegt werden.') : `Depot „${name}“ angelegt.`)
+    onToast(error ? (error.code === '23505' ? t('portfolio.depotExists') : t('portfolio.createError')) : t('portfolio.depotCreated', { name }))
     load()
   }
   async function renamePortfolio(p: Portfolio) {
-    const name = (await prompt({ title: 'Depot umbenennen', label: 'Neuer Name', initial: p.name }))?.trim()
+    const name = (await prompt({ title: t('portfolio.renameDepotTitle'), label: t('portfolio.newNameLabel'), initial: p.name }))?.trim()
     if (!name || name === p.name) return
     const { error } = await supabase.from('portfolios').update({ name: name.slice(0, 60) }).eq('id', p.id)
-    if (error) onToast('Umbenennen fehlgeschlagen.')
+    if (error) onToast(t('portfolio.renameError'))
     load()
   }
   async function deletePortfolio(p: Portfolio) {
-    const n = data?.txs.filter((t) => t.portfolio_id === p.id).length ?? 0
-    if (!(await confirm({ title: `Depot „${p.name}“ löschen?`, message: `${n} Transaktionen werden mit gelöscht. Das lässt sich nicht rückgängig machen.`, confirmLabel: 'Löschen', danger: true }))) return
+    const n = data?.txs.filter((tx) => tx.portfolio_id === p.id).length ?? 0
+    if (!(await confirm({ title: t('portfolio.deleteDepotTitle', { name: p.name }), message: t('portfolio.deleteDepotMessage', { count: n }), confirmLabel: t('portfolio.deleteConfirm'), danger: true }))) return
     const { error } = await supabase.from('portfolios').delete().eq('id', p.id)
-    onToast(error ? 'Löschen fehlgeschlagen.' : `Depot „${p.name}“ gelöscht.`)
+    onToast(error ? t('portfolio.deleteError') : t('portfolio.depotDeleted', { name: p.name }))
     load()
   }
 
@@ -152,30 +155,30 @@ export function PortfolioPage({
     <section className="pf">
       <div className={`refreshbar ${refreshing ? 'on' : ''}`} aria-hidden="true" />
       <div className="listhead">
-        <h1>Portfolio</h1>
-        <div className="seg" role="group" aria-label="Änderung anzeigen">
+        <h1>{t('portfolio.title')}</h1>
+        <div className="seg" role="group" aria-label={t('portfolio.changeModeAria')}>
           <button className={mode === 'day' ? 'on' : ''} aria-pressed={mode === 'day'} onClick={() => pick('day')}>
-            Heute
+            {t('portfolio.today')}
           </button>
           <button className={mode === 'total' ? 'on' : ''} aria-pressed={mode === 'total'} onClick={() => pick('total')}>
-            Gesamt
+            {t('portfolio.total')}
           </button>
         </div>
         <div className={narrow ? 'mtools' : 'tools'}>
           {narrow && (
-            <button className={`ghost iconbtn refreshbtn ${refreshing ? 'spin' : ''}`} onClick={() => load()} aria-label="Aktualisieren" title="Aktualisieren">
+            <button className={`ghost iconbtn refreshbtn ${refreshing ? 'spin' : ''}`} onClick={() => load()} aria-label={t('portfolio.refresh')} title={t('portfolio.refresh')}>
               <span><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.5-5.8" /><path d="M20 4v5h-5" /></svg></span>
             </button>
           )}
           <button className="ghost" onClick={() => setDialog('tx')} disabled={loading}>
-            {narrow ? '+ Neu' : '+ Transaktion'}
+            {narrow ? t('portfolio.addTxShort') : t('portfolio.addTx')}
           </button>
           <button className="ghost" onClick={() => setDialog('csv')} disabled={loading}>
-            Import
+            {t('portfolio.import')}
           </button>
           {!narrow && (
             <button className="ghost" onClick={addPortfolio} disabled={loading}>
-              + Depot
+              {t('portfolio.addDepot')}
             </button>
           )}
         </div>
@@ -186,13 +189,13 @@ export function PortfolioPage({
 
       {empty ? (
         <div className="mcard pf-empty">
-          <p>Noch kein Depot. Lege eines an oder importiere deine Transaktionen (z. B. den Parqet-Export).</p>
+          <p>{t('portfolio.emptyHint')}</p>
           <div className="tools">
             <button className="primary" onClick={addPortfolio}>
-              Depot anlegen
+              {t('portfolio.createDepot')}
             </button>
             <button className="ghost" onClick={() => setDialog('csv')}>
-              CSV importieren
+              {t('portfolio.importCsv')}
             </button>
           </div>
         </div>
@@ -203,14 +206,14 @@ export function PortfolioPage({
             ? Array.from({ length: 5 }, (_, i) => <PosRow key={i} mode={mode} narrow={narrow} />)
             : data.portfolios.map((p) => {
                 const rows = view!.positions.filter((r) => r.portfolio_id === p.id)
-                const t = sum(rows)
+                const tot = sum(rows)
                 return (
                   <div key={p.id} className="group">
                     <div className="grouphead pf-head">
                       <button
                         className="ghost icon chev"
                         aria-expanded={!p.collapsed}
-                        aria-label={`${p.name} ${p.collapsed ? 'aufklappen' : 'zuklappen'}`}
+                        aria-label={p.collapsed ? t('portfolio.expandDepot', { name: p.name }) : t('portfolio.collapseDepot', { name: p.name })}
                         onClick={() => toggle(p)}
                       >
                         {p.collapsed ? '▸' : '▾'}
@@ -218,9 +221,9 @@ export function PortfolioPage({
                       <button className="groupname static grow" onClick={() => toggle(p)}>
                         {p.name} <span className="muted small-count">{rows.length}</span>
                       </button>
-                      <span className="num pf-headval">{eur.format(t.value)}</span>
-                      <span className={`num small pf-headchg ${dirOf(mode === 'day' ? t.day : t.gain)}`}>
-                        {(mode === 'day' ? t.day_pct : t.gain_pct) == null ? '' : pct.format((mode === 'day' ? t.day_pct : t.gain_pct)!)}
+                      <span className="num pf-headval">{eur.format(tot.value)}</span>
+                      <span className={`num small pf-headchg ${dirOf(mode === 'day' ? tot.day : tot.gain)}`}>
+                        {(mode === 'day' ? tot.day_pct : tot.gain_pct) == null ? '' : pct.format((mode === 'day' ? tot.day_pct : tot.gain_pct)!)}
                       </span>
                       <PfMenu onRename={() => renamePortfolio(p)} onDelete={() => deletePortfolio(p)} />
                     </div>
@@ -230,7 +233,7 @@ export function PortfolioPage({
                           <PosRow key={r.symbol} r={r} mode={mode} narrow={narrow} logo={data.profiles[r.symbol]?.logo_url} name={data.profiles[r.symbol]?.name} onOpen={() => onOpen(r.symbol)} />
                         ))
                       ) : (
-                        <p className="muted small pf-none">Keine offenen Positionen.</p>
+                        <p className="muted small pf-none">{t('portfolio.noOpenPositions')}</p>
                       ))}
                   </div>
                 )
@@ -238,14 +241,14 @@ export function PortfolioPage({
         </div>
       )}
       {data && data.portfolios.length > 0 && (
-        <p className="muted small">Bewertung in Euro mit EZB-Tageskursen, Einstand als Durchschnittskosten inklusive Kaufgebühren.</p>
+        <p className="muted small">{t('portfolio.valuationNote')}</p>
       )}
 
       {dialog === 'tx' && data && <TxDialog portfolios={data.portfolios} onClose={() => setDialog(null)} onSaved={done} />}
       {dialog === 'csv' && data && (
         <CsvImport
           portfolios={data.portfolios}
-          knownIds={new Set(data.txs.map((t) => t.external_id).filter((x): x is string => Boolean(x)))}
+          knownIds={new Set(data.txs.map((tx) => tx.external_id).filter((x): x is string => Boolean(x)))}
           onClose={() => setDialog(null)}
           onDone={done}
         />
