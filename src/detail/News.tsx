@@ -1,3 +1,4 @@
+import { LOCALE } from '../i18n'
 import { useEffect, useState } from 'react'
 import {
   fetchNews,
@@ -7,7 +8,7 @@ import { Logo } from '../parts'
 
 /* ---------- News ---------- */
 
-const rel = new Intl.RelativeTimeFormat('de-DE', { numeric: 'auto' })
+const rel = new Intl.RelativeTimeFormat(LOCALE, { numeric: 'auto' })
 function ago(iso: string) {
   const s = (new Date(iso).getTime() - Date.now()) / 1000
   const a = Math.abs(s)

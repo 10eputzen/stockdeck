@@ -1,3 +1,4 @@
+import { LOCALE } from '../i18n'
 import { useEffect, useState } from 'react'
 import { compactNum } from '../lib/events'
 import { money, usd } from '../lib/format'
@@ -11,10 +12,10 @@ import { num2 } from './shared'
 
 /* ---------- Signale ---------- */
 
-const pct1 = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1, signDisplay: 'exceptZero' })
-const int = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 })
-const eps2 = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const shortDate = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })
+const pct1 = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1, signDisplay: 'exceptZero' })
+const int = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 0 })
+const eps2 = new Intl.NumberFormat(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const shortDate = new Intl.DateTimeFormat(LOCALE, { day: '2-digit', month: '2-digit', year: '2-digit' })
 const fmtDate = (d: string) => (/^\d{4}-\d{2}-\d{2}$/.test(d) ? shortDate.format(new Date(`${d}T12:00:00`)) : d)
 const quarterOf = (d: string) => {
   const m = /^(\d{4})-(\d{2})/.exec(d)

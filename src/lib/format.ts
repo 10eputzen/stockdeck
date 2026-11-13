@@ -1,16 +1,17 @@
-export const usd = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'USD' })
-export const usdSigned = new Intl.NumberFormat('de-DE', {
+import { LOCALE } from '../i18n'
+export const usd = new Intl.NumberFormat(LOCALE, { style: 'currency', currency: 'USD' })
+export const usdSigned = new Intl.NumberFormat(LOCALE, {
   style: 'currency',
   currency: 'USD',
   signDisplay: 'exceptZero',
 })
-export const pct = new Intl.NumberFormat('de-DE', {
+export const pct = new Intl.NumberFormat(LOCALE, {
   style: 'percent',
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
   signDisplay: 'exceptZero',
 })
-export const time = new Intl.DateTimeFormat('de-DE', { dateStyle: 'short', timeStyle: 'short' })
+export const time = new Intl.DateTimeFormat(LOCALE, { dateStyle: 'short', timeStyle: 'short' })
 
 
 const fmts = new Map<string, Intl.NumberFormat>()
@@ -21,9 +22,9 @@ function cached(key: string, make: () => Intl.NumberFormat) {
 }
 /** Betrag in der Währung des Kurses (US-Werte USD, Xetra EUR …). */
 export const money = (cur?: string | null) =>
-  cached(`m${cur}`, () => new Intl.NumberFormat('de-DE', { style: 'currency', currency: cur || 'USD' }))
+  cached(`m${cur}`, () => new Intl.NumberFormat(LOCALE, { style: 'currency', currency: cur || 'USD' }))
 export const moneySigned = (cur?: string | null) =>
-  cached(`s${cur}`, () => new Intl.NumberFormat('de-DE', { style: 'currency', currency: cur || 'USD', signDisplay: 'exceptZero' }))
+  cached(`s${cur}`, () => new Intl.NumberFormat(LOCALE, { style: 'currency', currency: cur || 'USD', signDisplay: 'exceptZero' }))
 export const eur = money('EUR')
 export const eurSigned = moneySigned('EUR')
 

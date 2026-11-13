@@ -1,3 +1,4 @@
+import { LOCALE } from './i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { parseNum } from './lib/csv'
 import {
@@ -14,9 +15,9 @@ import {
 } from './lib/alerts'
 import { supabase } from './lib/supabase'
 
-const fmt = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 4 })
+const fmt = (n: number) => n.toLocaleString(LOCALE, { maximumFractionDigits: 4 })
 const when = (iso: string) =>
-  new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  new Date(iso).toLocaleString(LOCALE, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 
 function ruleText(r: AlertRule) {
   if (r.kind === 'change_pct_day') return `${KIND_LABEL[r.kind]}${fmt(r.threshold)} %`

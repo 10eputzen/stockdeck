@@ -1,3 +1,4 @@
+import { LOCALE } from '../i18n'
 import type { EarningsEvent } from './supabase'
 
 /** Tage bis zum Termin (Kalendertage, lokale Zeit); negativ = vorbei. */
@@ -8,14 +9,14 @@ export function daysUntil(isoDate: string, now = new Date()): number {
   return Math.round((target - today) / 86400000)
 }
 
-const short = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'numeric' })
-const long = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })
+const short = new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'numeric' })
+const long = new Intl.DateTimeFormat(LOCALE, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })
 const toDate = (iso: string) => {
   const [y, m, d] = iso.split('-').map(Number)
   return new Date(y, m - 1, d)
 }
 
-const colDate = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })
+const colDate = new Intl.DateTimeFormat(LOCALE, { weekday: 'short', day: '2-digit', month: '2-digit' })
 
 export const HOUR_LABEL: Record<string, string> = {
   bmo: 'vor Börsenöffnung',
@@ -45,7 +46,7 @@ export function earningsLong(ev: EarningsEvent): string {
   return ev.hour ? `${when}, ${HOUR_LABEL[ev.hour]}` : when
 }
 
-const compact = new Intl.NumberFormat('de-DE', { notation: 'compact', maximumFractionDigits: 1 })
+const compact = new Intl.NumberFormat(LOCALE, { notation: 'compact', maximumFractionDigits: 1 })
 
 /** Große Beträge kurz: 111,4 Mrd. */
 export const compactNum = (n: number) => compact.format(n)

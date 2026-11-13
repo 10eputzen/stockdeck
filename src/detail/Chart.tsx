@@ -1,3 +1,4 @@
+import { LOCALE } from '../i18n'
 import { THEME_EVENT } from '../lib/theme'
 import {
   AreaSeries,
@@ -52,15 +53,15 @@ function themeColors() {
 }
 
 const fmtTime = (intraday: boolean) =>
-  new Intl.DateTimeFormat('de-DE', {
+  new Intl.DateTimeFormat(LOCALE, {
     timeZone: 'UTC',
     ...(intraday ? { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: '2-digit', year: 'numeric' }),
   })
 const tick = {
-  year: new Intl.DateTimeFormat('de-DE', { timeZone: 'UTC', year: 'numeric' }),
-  month: new Intl.DateTimeFormat('de-DE', { timeZone: 'UTC', month: 'short' }),
-  day: new Intl.DateTimeFormat('de-DE', { timeZone: 'UTC', day: 'numeric', month: 'numeric' }),
-  time: new Intl.DateTimeFormat('de-DE', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' }),
+  year: new Intl.DateTimeFormat(LOCALE, { timeZone: 'UTC', year: 'numeric' }),
+  month: new Intl.DateTimeFormat(LOCALE, { timeZone: 'UTC', month: 'short' }),
+  day: new Intl.DateTimeFormat(LOCALE, { timeZone: 'UTC', day: 'numeric', month: 'numeric' }),
+  time: new Intl.DateTimeFormat(LOCALE, { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' }),
 }
 /** Achsenbeschriftung auf Deutsch (Zeiten sind bereits auf New York verschoben, daher UTC). */
 function tickLabel(t: Time, type: TickMarkType) {
@@ -70,7 +71,7 @@ function tickLabel(t: Time, type: TickMarkType) {
   if (type === TickMarkType.DayOfMonth) return tick.day.format(d)
   return tick.time.format(d)
 }
-const compact = new Intl.NumberFormat('de-DE', { notation: 'compact', maximumFractionDigits: 1 })
+const compact = new Intl.NumberFormat(LOCALE, { notation: 'compact', maximumFractionDigits: 1 })
 
 type Legend = { time: string; o: number; h: number; l: number; c: number; v: number } | null
 
@@ -146,7 +147,7 @@ export function PriceChart({ symbol, currency }: { symbol: string; currency?: st
       timeScale: { borderVisible: false, rightOffset: 2, tickMarkFormatter: tickLabel },
       crosshair: { mode: CrosshairMode.Magnet },
       handleScroll: { vertTouchDrag: false },
-      localization: { locale: 'de-DE', priceFormatter: (n: number) => money(curRef.current).format(n) },
+      localization: { locale: LOCALE, priceFormatter: (n: number) => money(curRef.current).format(n) },
     })
     candles.current = api.addSeries(CandlestickSeries, {
       upColor: c.up,

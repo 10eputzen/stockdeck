@@ -1,3 +1,4 @@
+import { LOCALE } from './i18n'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Fragment, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
@@ -7,7 +8,7 @@ import type { Signal } from './lib/signals'
 import { dirOf, money, moneySigned, pct, time } from './lib/format'
 
 /** Tagesspanne ohne Währungszeichen (steht schon beim Kurs), damit sie in die Spalte passt. */
-const spanNum = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const spanNum = new Intl.NumberFormat(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 export const Sk = ({ w }: { w: number | string }) => <span className="sk sk-text" style={{ width: w }} />
 

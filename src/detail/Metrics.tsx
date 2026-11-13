@@ -1,3 +1,4 @@
+import { LOCALE } from '../i18n'
 import { useEffect, useState } from 'react'
 import { compactNum, earningsLong } from '../lib/events'
 import { pct, usd } from '../lib/format'
@@ -10,7 +11,7 @@ import { num2 } from './shared'
 
 /* ---------- Quartalszahlen und Kennzahlen ---------- */
 
-const pctPlain = new Intl.NumberFormat('de-DE', { style: 'percent', maximumFractionDigits: 1 })
+const pctPlain = new Intl.NumberFormat(LOCALE, { style: 'percent', maximumFractionDigits: 1 })
 
 export function EarningsText({ ev }: { ev: EarningsEvent }) {
   const parts = [

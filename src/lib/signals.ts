@@ -1,8 +1,9 @@
+import { LOCALE } from '../i18n'
 import type { Quote, Signals } from './supabase'
 
 export type Signal = { text: string; tone: 'up' | 'down' | ''; title: string }
 
-const pct0 = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0, signDisplay: 'exceptZero' })
+const pct0 = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 0, signDisplay: 'exceptZero' })
 const SHORT: Record<string, string> = {
   'Stark kaufen': 'Kaufen+',
   Kaufen: 'Kaufen',

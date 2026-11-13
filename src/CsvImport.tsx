@@ -1,3 +1,4 @@
+import { LOCALE } from './i18n'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { parseCsv } from './lib/csv'
 import { resolveIsins, supabase, type Portfolio } from './lib/supabase'
@@ -159,7 +160,7 @@ export function CsvImport({
                       <td className="ellipsis">{r.symbol ?? r.isin}</td>
                       <td className="num">{r.quantity || ''}</td>
                       <td className="num">
-                        {r.price.toLocaleString('de-DE', { maximumFractionDigits: 4 })} {r.currency}
+                        {r.price.toLocaleString(LOCALE, { maximumFractionDigits: 4 })} {r.currency}
                       </td>
                     </tr>
                   ))}

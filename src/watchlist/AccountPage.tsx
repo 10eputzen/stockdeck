@@ -1,7 +1,7 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import type { Columns } from "../lib/columns";
 import { ColumnList } from "../ColumnMenu";
-import { ThemeChoice } from "../ThemeSwitch";
+import { LangChoice, ThemeChoice } from "../ThemeSwitch";
 
 const AlertsSection = lazy(() =>
   import("../Alerts").then((m) => ({ default: m.AlertsSection })),
@@ -48,6 +48,8 @@ export function AccountPage({
       </div>
       <h2 className="mh2">Darstellung</h2>
       <ThemeChoice />
+      <h2 className="mh2">Sprache</h2>
+      <LangChoice />
       <h2 className="mh2">Anzeige</h2>
       <div className="mcard checks" role="group" aria-label="Angezeigte Werte">
         <ColumnList cols={cols} onChange={setCols} mobile />

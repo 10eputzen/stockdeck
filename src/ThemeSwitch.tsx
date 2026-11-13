@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getThemePref, setThemePref, THEME_EVENT, type ThemePref } from './lib/theme'
+import { lang, LANGS, setLang } from './i18n'
 
 function useTheme() {
   const [pref, setPref] = useState<ThemePref>(getThemePref)
@@ -28,6 +29,19 @@ export function ThemeChoice() {
       {opts.map(([v, l]) => (
         <button key={v} role="radio" aria-checked={pref === v} className={pref === v ? 'active' : ''} onClick={() => choose(v)}>
           {l}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** Sprachwahl im Konto; ein Wechsel lädt die Seite neu. */
+export function LangChoice() {
+  return (
+    <div className="mcard seg" role="radiogroup" aria-label="Sprache">
+      {LANGS.map(({ id, label }) => (
+        <button key={id} role="radio" aria-checked={lang === id} className={lang === id ? 'active' : ''} onClick={() => setLang(id)}>
+          {label}
         </button>
       ))}
     </div>
