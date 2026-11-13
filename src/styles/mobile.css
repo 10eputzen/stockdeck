@@ -1,0 +1,90 @@
+/* ---------- Handy (gleiche Grenze wie useNarrow) ---------- */
+.bottomnav { display: none; }
+.mpage { display: grid; gap: 12px; }
+.mpage h1 { margin-bottom: 4px; }
+.mh2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 12px 0 0; font-weight: 600; }
+.mcard { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.mcard.checks { display: grid; padding: 4px; }
+.mcard.checks label { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; }
+.mitem {
+  display: flex; align-items: center; width: 100%; min-height: 48px; padding: 0 16px;
+  background: none; border: 0; border-bottom: 1px solid var(--border); color: var(--text); text-align: left;
+}
+.mitem:last-child { border-bottom: 0; }
+.mitem.danger { color: var(--down); }
+.mtools { display: flex; gap: 8px; }
+.mtools button { min-height: 40px; min-width: 44px; }
+/* Bearbeiten/Fertig: gleiche Breite und Rahmen in beiden Zuständen, damit nichts springt */
+.mtools .editbtn { width: 6.8rem; text-align: center; }
+.mtools .editbtn.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent, #fff); }
+.inlist { margin: 0 0 0 auto; white-space: nowrap; }
+.add.inline { width: 100%; }
+.add.inline input { font-size: 16px; padding: 12px 14px; border-radius: 10px; }
+.add.inline .results { position: static; margin-top: 8px; box-shadow: none; }
+.add.inline .results button { min-height: 48px; align-items: center; }
+
+@media (max-width: 767px) {
+  .shell { padding: 0 12px 24px; }
+  /* Fünf Reiter passen nebeneinander */
+  .subtabs { gap: 0; }
+  .subtabs button { padding-left: 8px; padding-right: 8px; letter-spacing: 0; }
+  .shell.authed { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  .topbar { padding: 10px 0; margin-bottom: 12px; }
+  .shell.authed .topbar .user { display: none; }
+  .listhead { margin-bottom: 10px; flex-wrap: nowrap; }
+  .hide-sm { display: none; }
+  .ext { font-size: 0.66rem; }
+
+  /* Zeile im Broker-Stil: Logo · Symbol/Name · Kurs/Änderung */
+  .row.m {
+    grid-template-columns: 36px minmax(0, 1fr) auto; column-gap: 12px;
+    height: 64px; padding: 0 12px; cursor: default; user-select: none; -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .watch.editing .row.m { grid-template-columns: 36px minmax(0, 1fr) auto 44px; }
+  .row.m .logo.lg, .logo.lg { width: 36px; height: 36px; font-size: 0.9rem; }
+  .mstack { display: grid; min-width: 0; line-height: 1.25; }
+  .mstack .sym { font-size: 1rem; }
+  .mstack .small { margin: 0; font-size: 0.8rem; }
+  .mright { display: grid; justify-items: end; gap: 3px; }
+  .mprice { font-weight: 600; font-size: 1rem; }
+  .remove-lg { width: 44px; height: 44px; font-size: 1.4rem; color: var(--down); }
+  .grouphead { height: 48px; }
+  .grouphead .ghost.icon { min-width: 40px; min-height: 40px; }
+  .groupname { min-height: 40px; }
+
+  .toast-wrap { bottom: calc(76px + env(safe-area-inset-bottom)); }
+
+  .shell:has(.detail) .topbar { display: none; }
+  .shell.authed:has(.detail) { padding-bottom: calc(24px + env(safe-area-inset-bottom)); padding-top: 6px; }
+  .chartbox { height: 320px; }
+  .ranges button { font-size: 0.8rem; }
+  .dprice .big { font-size: 1.7rem; }
+  .thumb { width: 64px; height: 64px; }
+
+  .bottomnav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    padding-bottom: env(safe-area-inset-bottom);
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+  }
+  .bottomnav button {
+    display: grid; justify-items: center; align-content: center; gap: 2px; height: 58px;
+    background: none; border: 0; color: var(--muted); font-size: 0.7rem; font-weight: 500;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .bottomnav svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .bottomnav button.active { color: var(--accent); font-weight: 600; }
+
+  /* Suche als Overlay über der Watchlist (Lupe in der Kopfzeile) */
+  .iconbtn { display: grid; place-items: center; padding: 0 10px; }
+  .iconbtn svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .sheet {
+    position: fixed; inset: 0; z-index: 45; overflow-y: auto;
+    padding: calc(12px + env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom));
+    background: var(--bg);
+  }
+  body:has(.sheet) { overflow: hidden; }
+}

@@ -1,0 +1,62 @@
+/* ---------- Detailseite ---------- */
+.row.stock { cursor: pointer; }
+.detail { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.detail-loading { height: 480px; border-radius: 12px; }
+.dhead { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.dhead .back { width: 44px; height: 44px; margin-left: -8px; display: grid; place-items: center; color: var(--text); }
+.dhead svg, .kind svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.dhead .logo.lg { width: 40px; height: 40px; }
+.dname { flex: 1; }
+.dname h1 { font-size: 1.15rem; line-height: 1.25; }
+.addbtn { white-space: nowrap; min-height: 40px; }
+.dprice { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.dprice .big { font-size: 1.9rem; font-weight: 700; letter-spacing: -0.02em; }
+.dprice .pill { font-size: 0.85rem; }
+.ext-line { flex-basis: 100%; margin: 0; min-height: 1.2em; }
+.extchg { font-weight: 600; }
+.pill {
+  display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 2px 7px; border-radius: 6px;
+  background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--muted); white-space: nowrap;
+}
+.pill.up { background: color-mix(in srgb, var(--up) 15%, transparent); color: var(--up); }
+.pill.down { background: color-mix(in srgb, var(--down) 15%, transparent); color: var(--down); }
+.subtabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+.subtabs button { flex: none; }
+.subtabs button {
+  background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted);
+  padding: 10px 14px; min-height: 44px; font-weight: 600; margin-bottom: -1px;
+}
+.subtabs button.active { color: var(--text); border-bottom-color: var(--accent); }
+.chartwrap { display: grid; gap: 8px; min-width: 0; }
+.ranges { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
+.ranges button, .kind button { background: none; border: 0; color: var(--muted); border-radius: 7px; min-height: 36px; font-size: 0.85rem; font-weight: 600; padding: 0; }
+.ranges button.active, .kind button.active { background: var(--accent); color: #fff; }
+.legend { display: flex; align-items: center; gap: 8px; height: 36px; font-size: 0.82rem; min-width: 0; }
+.legend-text { flex: 1; overflow: hidden; text-overflow: ellipsis; text-align: left !important; }
+.legend-chg { font-weight: 600; white-space: nowrap; }
+.kind { display: flex; gap: 2px; border: 1px solid var(--border); border-radius: 9px; padding: 2px; }
+.kind button { width: 36px; min-height: 30px; display: grid; place-items: center; }
+.chartbox { position: relative; height: 420px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.chart { position: absolute; inset: 0; }
+.chart-cover { position: absolute; inset: 0; margin: 0; border-radius: 0; }
+.chart-cover.msg { display: grid; place-items: center; background: var(--surface); }
+.tiny { font-size: 0.72rem; margin: 0; }
+.tiny a { color: inherit; }
+.news { list-style: none; margin: 0; padding: 0; display: grid; }
+.newsitem { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); color: var(--text); text-decoration: none; min-width: 0; }
+.news li:last-child .newsitem { border-bottom: 0; }
+.thumb { width: 72px; height: 72px; flex: none; border-radius: 8px; object-fit: cover; background: var(--border); }
+.thumb.tile {
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--surface)), color-mix(in srgb, var(--accent) 4%, var(--surface)));
+  border: 1px solid var(--border);
+}
+.thumb.tile { position: relative; overflow: hidden; }
+.thumb.tile .logo { width: 40px; height: 40px; }
+.thumb.tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.25s ease; }
+.thumb.tile img.shown { opacity: 1; }
+.more { justify-self: center; margin-top: 12px; min-height: 44px; padding: 0 20px; }
+.ntext { display: grid; gap: 4px; min-width: 0; align-content: start; }
+.nhead { font-weight: 600; line-height: 1.3; }
+.nsum { font-size: 0.85rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.newsitem:hover .nhead { color: var(--accent); }

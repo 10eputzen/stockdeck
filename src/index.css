@@ -1,0 +1,7 @@
+/* Reihenfolge zählt: spätere Dateien überschreiben frühere (Design „Terminal“ zuletzt). */
+@import './styles/base.css';
+@import './styles/detail.css';
+@import './styles/mobile.css';
+@import './styles/signals.css';
+@import './styles/portfolio.css';
+@import './styles/theme.css';

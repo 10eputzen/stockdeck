@@ -1,0 +1,51 @@
+/* ===== Design „Terminal“ (Entwurf B): dicht, Monospace, Bernstein-Akzent; Hell und Dunkel ===== */
+:root {
+  --on-accent: #0a0b0d;
+  font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', monospace;
+  font-size: 13.5px; line-height: 1.35;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0a0b0d; --surface: #101215; --text: #d8dbe0; --muted: #7d838d; --border: #1f2328;
+  --accent: #ffb020; --on-accent: #0a0b0d; --up: #2fd17c; --down: #ff4d4d;
+  --zebra: color-mix(in srgb, var(--surface) 70%, #000); --hover: #171a1f; --line: #2c3138;
+}
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f4f1ea; --surface: #fbfaf6; --text: #1a1c20; --muted: #686c73; --border: #dcd7cb;
+  --accent: #a05f00; --on-accent: #fff; --up: #0b7d47; --down: #c42b2b;
+  --zebra: #f3efe6; --hover: #ebe6da; --line: #cfc9bb;
+}
+.primary, .badge, .ranges button.active, .kind button.active { color: var(--on-accent); }
+h1 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); }
+.brand { color: var(--accent); text-transform: uppercase; letter-spacing: 0.2em; }
+.brand::before { content: '▌'; margin-right: 6px; }
+.topbar { padding: 10px 0; margin-bottom: 14px; }
+.mcard, .pf-totals, .watch, .ghost, .primary, input, select, .dialog { border-radius: 2px !important; }
+.primary { background: var(--accent); font-weight: 700; }
+.ghost { border-color: var(--line); text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.08em; }
+.ghost:hover { border-color: var(--accent); color: var(--accent); }
+.desktabs button { text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.78rem; }
+.desktabs button.active { border-bottom-color: var(--accent); color: var(--accent); }
+.row.head { color: var(--accent); opacity: .85; height: 30px; }
+.row:not(.head):nth-child(even) { background: var(--zebra); }
+.row:hover { background: var(--hover) !important; }
+.pf-totals .big { color: var(--text); }
+.pf-totals .lbl { text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); font-size: 0.7rem; }
+.pill { border-radius: 2px; }
+
+/* Hell/Dunkel-Auswahl im Konto */
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 3px; }
+.seg button { background: none; border: 0; color: var(--muted); min-height: 40px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.78rem; }
+.seg button.active { background: var(--accent); color: var(--on-accent); }
+
+/* Nichts darf seitlich überstehen (Monospace und Großbuchstaben sind breiter) */
+.shell { overflow-x: clip; }
+main, .pf, .mpage, .listhead h1 { min-width: 0; }
+@media (max-width: 767px) {
+  .listhead .tools .ghost, .mtools .ghost { padding: 6px 9px; letter-spacing: 0.04em; }
+  .listhead h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pf-totals .num { white-space: normal; overflow-wrap: anywhere; }
+  .pf-totals .big { font-size: 1.35rem; }
+  .pf-totals .small { white-space: nowrap; }
+}
