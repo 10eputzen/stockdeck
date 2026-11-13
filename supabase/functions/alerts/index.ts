@@ -18,7 +18,9 @@ type Rule = {
   threshold: number;
   params: { weeks?: number; exclude?: string[]; since?: string };
 };
-type Push = { title: string; body: string; url: string; tag?: string };
+/** Text je Sprache: jedes Gerät bekommt den Push in seiner Sprache. */
+type Text = (lang: Lang) => { title: string; body: string };
+type Push = { text: Text; url: string; tag?: string };
 type NewEvent = { user_id: string; rule_id: string; kind: string; symbol: string; title: string; body: string; dedupe_key: string };
 
 webpush.setVapidDetails(
@@ -41,11 +43,11 @@ function berlinNow() {
 }
 
 async function sendToUser(admin: SupabaseClient, userId: string, msg: Push): Promise<number> {
-  const { data: subs } = await admin.from("push_subscriptions").select("id, endpoint, p256dh, auth").eq("user_id", userId);
+  const { data: subs } = await admin.from("push_subscriptions").select("id, endpoint, p256dh, auth, lang").eq("user_id", userId);
   let sent = 0;
   for (const s of subs ?? []) {
     try {
-      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(msg), { TTL: 6 * 3600 });
+      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify({ ...msg.text(asLang(s.lang)), url: msg.url, tag: msg.tag }), { TTL: 6 * 3600 });
       sent++;
     } catch (e) {
       const status = (e as { statusCode?: number }).statusCode;
@@ -90,7 +92,7 @@ async function run(admin: SupabaseClient) {
   const list = [...symbols];
   for (const q of await getQuotes(admin, list)) quotes[q.symbol] = q;
 
-  // Sprache je Nutzer: die des zuletzt angemeldeten Geräts
+  // Sprache des Verlaufs je Nutzer: die des zuletzt angemeldeten Geräts (Pushes gehen je Gerät in dessen Sprache)
   const langOf = new Map<string, Lang>();
   const { data: subLangs } = await admin.from("push_subscriptions").select("user_id, lang").order("created_at", { ascending: true });
   for (const s of subLangs ?? []) langOf.set(s.user_id, asLang(s.lang));
@@ -100,21 +102,27 @@ async function run(admin: SupabaseClient) {
   for (const r of all) {
     const thr = Number(r.threshold);
     const lang = langOf.get(r.user_id) ?? "de";
-    const tx = TEXTS[lang];
-    const { pct, num, date } = fmt(lang);
     if (r.symbol) {
       const q = quotes[r.symbol];
       if (!q || !(q.price > 0)) continue;
       const url = `/#/s/${encodeURIComponent(r.symbol)}`;
       if ((r.kind === "price_above" && q.price >= thr) || (r.kind === "price_below" && q.price <= thr)) {
-        const title = tx.priceTitle(r.symbol, r.kind === "price_above", num(thr, q.currency));
-        const body = tx.priceBody(num(q.price, q.currency), pct(q.change_pct));
-        events.push({ user_id: r.user_id, rule_id: r.id, kind: r.kind, symbol: r.symbol, title, body, dedupe_key: `rule:${r.id}:${today}`, push: { title, body, url, tag: r.id } });
+        const sym = r.symbol, above = r.kind === "price_above";
+        const text: Text = (L) => {
+          const { pct, num } = fmt(L);
+          return { title: TEXTS[L].priceTitle(sym, above, num(thr, q.currency)), body: TEXTS[L].priceBody(num(q.price, q.currency), pct(q.change_pct)) };
+        };
+        const { title, body } = text(lang);
+        events.push({ user_id: r.user_id, rule_id: r.id, kind: r.kind, symbol: r.symbol, title, body, dedupe_key: `rule:${r.id}:${today}`, push: { text, url, tag: r.id } });
         oneShot.push(r.id);
       } else if (r.kind === "change_pct_day" && Math.abs(q.change_pct) >= thr) {
-        const title = tx.dayTitle(r.symbol, pct(q.change_pct));
-        const body = tx.dayBody(num(q.price, q.currency), num(thr));
-        events.push({ user_id: r.user_id, rule_id: r.id, kind: r.kind, symbol: r.symbol, title, body, dedupe_key: `rule:${r.id}:${today}`, push: { title, body, url, tag: r.id } });
+        const sym = r.symbol;
+        const text: Text = (L) => {
+          const { pct, num } = fmt(L);
+          return { title: TEXTS[L].dayTitle(sym, pct(q.change_pct)), body: TEXTS[L].dayBody(num(q.price, q.currency), num(thr)) };
+        };
+        const { title, body } = text(lang);
+        events.push({ user_id: r.user_id, rule_id: r.id, kind: r.kind, symbol: r.symbol, title, body, dedupe_key: `rule:${r.id}:${today}`, push: { text, url, tag: r.id } });
       }
       continue;
     }
@@ -135,13 +143,20 @@ async function run(admin: SupabaseClient) {
       const url = `/#/s/${encodeURIComponent(p.symbol)}`;
       const key = `${r.kind}:${p.portfolio_id}:${p.symbol}:${p.opened}`;
       if (r.kind === "finanzplan_gain" && g >= thr && p.opened >= since) {
-        const title = tx.gainTitle(name, pct(g));
-        const body = tx.gainBody(num(thr), r.params?.weeks ?? 4, date(p.opened));
-        events.push({ user_id: r.user_id, rule_id: r.id, kind: r.kind, symbol: p.symbol, title, body, dedupe_key: key, push: { title, body, url, tag: key } });
+        const weeks = r.params?.weeks ?? 4, opened = p.opened;
+        const text: Text = (L) => {
+          const { pct, num, date } = fmt(L);
+          return { title: TEXTS[L].gainTitle(name, pct(g)), body: TEXTS[L].gainBody(num(thr), weeks, date(opened)) };
+        };
+        const { title, body } = text(lang);
+        events.push({ user_id: r.user_id, rule_id: r.id, kind: r.kind, symbol: p.symbol, title, body, dedupe_key: key, push: { text, url, tag: key } });
       } else if (r.kind === "finanzplan_stop" && g <= -thr) {
-        const title = tx.stopTitle(name, pct(g));
-        const body = tx.stopBody(num(thr));
-        events.push({ user_id: r.user_id, rule_id: r.id, kind: r.kind, symbol: p.symbol, title, body, dedupe_key: key, push: { title, body, url, tag: key } });
+        const text: Text = (L) => {
+          const { pct, num } = fmt(L);
+          return { title: TEXTS[L].stopTitle(name, pct(g)), body: TEXTS[L].stopBody(num(thr)) };
+        };
+        const { title, body } = text(lang);
+        events.push({ user_id: r.user_id, rule_id: r.id, kind: r.kind, symbol: p.symbol, title, body, dedupe_key: key, push: { text, url, tag: key } });
       }
     }
   }
@@ -197,10 +212,8 @@ Deno.serve(async (req) => {
     const { data: allowed } = await userClient.rpc("is_allowed");
     const { data: user } = await userClient.auth.getUser();
     if (allowed !== true || !user.user) return json({ error: "forbidden" }, 403);
-    const tx = TEXTS[asLang(body.lang)];
     const sent = await sendToUser(admin, user.user.id, {
-      title: tx.testTitle,
-      body: tx.testBody,
+      text: (L) => ({ title: TEXTS[L].testTitle, body: TEXTS[L].testBody }),
       url: "/#/konto",
       tag: "test",
     });

@@ -175,7 +175,7 @@
     "errRename": "Rename failed.",
     "errSave": "Could not be saved.",
     "deleteGroupConfirmTitle": "Delete group “{{name}}”?",
-    "deleteGroupConfirmMoved_one": "The {{count}} item will be moved to “Ungrouped”.",
+    "deleteGroupConfirmMoved_one": "The item will be moved to “Ungrouped”.",
     "deleteGroupConfirmMoved_other": "The {{count}} items will be moved to “Ungrouped”.",
     "delete": "Delete",
     "errDeleteGroup": "Group could not be deleted.",

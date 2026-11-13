@@ -175,7 +175,7 @@
     "errRename": "Umbenennen fehlgeschlagen.",
     "errSave": "Konnte nicht gespeichert werden.",
     "deleteGroupConfirmTitle": "Gruppe „{{name}}“ löschen?",
-    "deleteGroupConfirmMoved_one": "Die {{count}} Werte landen unter „Ohne Gruppe“.",
+    "deleteGroupConfirmMoved_one": "Der Wert landet unter „Ohne Gruppe“.",
     "deleteGroupConfirmMoved_other": "Die {{count}} Werte landen unter „Ohne Gruppe“.",
     "delete": "Löschen",
     "errDeleteGroup": "Gruppe konnte nicht gelöscht werden.",

@@ -14,6 +14,7 @@ import {
   type AlertRule,
   type PushState,
 } from './lib/alerts'
+import { isoDate } from './lib/format'
 import { supabase } from './lib/supabase'
 
 const fmt = (n: number) => n.toLocaleString(LOCALE, { maximumFractionDigits: 4 })
@@ -131,7 +132,7 @@ export function AlertsSection({ onToast, onOpen }: { onToast: (t: string) => voi
             ))}
             <p className="mnote">
               {t('detail.planRulesNote', {
-                since: fp[0]?.params.since ? fp[0].params.since.split('-').reverse().join('.') : t('detail.immediately'),
+                since: fp[0]?.params.since ? isoDate(fp[0].params.since) : t('detail.immediately'),
                 excluded: fp[0]?.params.exclude?.join(', ') || t('detail.nothingExcluded'),
               })}
             </p>

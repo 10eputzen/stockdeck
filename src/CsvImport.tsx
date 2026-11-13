@@ -1,6 +1,7 @@
 import { LOCALE } from './i18n'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { isoDate } from './lib/format'
 import { parseCsv } from './lib/csv'
 import { resolveIsins, supabase, type Portfolio } from './lib/supabase'
 import { TX_LABEL } from './lib/txLabels'
@@ -157,7 +158,7 @@ export function CsvImport({
                 <tbody>
                   {fresh.slice(0, 8).map((r) => (
                     <tr key={r.external_id}>
-                      <td>{r.date.split('-').reverse().join('.')}</td>
+                      <td>{isoDate(r.date)}</td>
                       <td>{TX_LABEL[r.type]}</td>
                       <td className="ellipsis">{r.symbol ?? r.isin}</td>
                       <td className="num">{r.quantity || ''}</td>

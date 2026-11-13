@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { holdings, valuate } from '../../supabase/functions/_shared/positions.ts'
-import { eur, eurSigned, money, pct } from '../lib/format'
+import { eur, eurSigned, isoDate, money, pct } from '../lib/format'
 import { fetchFx, supabase, TX_COLS, type Portfolio, type Quote, type Transaction } from '../lib/supabase'
 import { TX_LABEL } from '../lib/txLabels'
 import { TxDialog } from '../TxDialog'
@@ -62,7 +62,7 @@ export function PositionTab({ symbol, quote }: { symbol: string; quote?: Quote }
           </div>
           <div className="metric">
             <span className="lbl">{t('portfolio.heldSince')}</span>
-            <span className="val">{p.opened ? p.opened.split('-').reverse().join('.') : '–'}</span>
+            <span className="val">{p.opened ? isoDate(p.opened) : '–'}</span>
           </div>
         </div>
       ))}
@@ -90,7 +90,7 @@ export function PositionTab({ symbol, quote }: { symbol: string; quote?: Quote }
             <tbody>
               {state.txs.map((tx) => (
                 <tr key={tx.id} tabIndex={0} onClick={() => setEdit(tx)} onKeyDown={(e) => e.key === 'Enter' && setEdit(tx)} title={t('portfolio.edit')}>
-                  <td>{tx.date.split('-').reverse().join('.')}</td>
+                  <td>{isoDate(tx.date)}</td>
                   <td>{TX_LABEL[tx.type]}</td>
                   <td className="hide-sm">{byPf.get(tx.portfolio_id)}</td>
                   <td className="num">{tx.quantity ? qtyExact.format(tx.quantity) : ''}</td>

@@ -31,3 +31,7 @@ export const eurSigned = moneySigned('EUR')
 /** CSS-Klasse für die Richtung einer Veränderung; Werte unter `eps` gelten als unverändert. */
 export const dirOf = (n?: number | null, eps = 0) =>
   n == null || n === 0 || Math.abs(n) < eps ? '' : n > 0 ? 'up' : 'down'
+
+const dayFmt = new Intl.DateTimeFormat(LOCALE, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
+/** Kalenderdatum (YYYY-MM-DD) im Format der Sprache, ohne Zeitzonen-Verschiebung. */
+export const isoDate = (iso: string) => dayFmt.format(new Date(`${iso.slice(0, 10)}T00:00:00Z`))
