@@ -56,9 +56,10 @@ export async function resolveIsins(admin: SupabaseClient, input: unknown[]) {
 
 const TX_COLS = "id, portfolio_id, symbol, isin, name, type, date, quantity, price, currency, fees, taxes, fx_rate, note, source, external_id, created_at";
 
-/** Depots mit bewerteten Positionen; `filter` = Depot-Name oder -ID (optional). */
-export async function portfolioOverview(admin: SupabaseClient, userId: string, filter?: string) {
-  const { data: pfs, error } = await admin
+/** Depots mit bewerteten Positionen; `filter` = Depot-Name oder -ID (optional).
+ *  `db` liest die Nutzerdaten (mit RLS, wenn es ein Nutzer-Client ist), `admin` den Kurs-Cache. */
+export async function portfolioOverview(db: SupabaseClient, admin: SupabaseClient, userId: string, filter?: string) {
+  const { data: pfs, error } = await db
     .from("portfolios")
     .select("id, name, currency, position")
     .eq("user_id", userId)
@@ -66,7 +67,7 @@ export async function portfolioOverview(admin: SupabaseClient, userId: string, f
   if (error) throw error;
   const chosen = (pfs ?? []).filter((p) => !filter || p.id === filter || p.name.toLowerCase() === filter.toLowerCase());
   if (chosen.length === 0) return { currency: "EUR", portfolios: [], totals: sum([]), fx_date: null };
-  const { data: txs, error: e2 } = await admin
+  const { data: txs, error: e2 } = await db
     .from("transactions")
     .select(TX_COLS)
     .eq("user_id", userId)

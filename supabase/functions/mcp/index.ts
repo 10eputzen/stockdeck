@@ -3,10 +3,15 @@
 //
 // Auth, geprüft hier (verify_jwt ist für diese Function aus, config.toml):
 //   OAuth 2.1 über Supabase Auth (claude.ai-Connector): Authorization: Bearer <Supabase-JWT>.
+//     Nur Tokens des OAuth-Servers (Claim client_id), nicht die Login-Tokens der App. Abfragen laufen
+//     mit den Rechten des Nutzers, also unter denselben RLS-Regeln wie in der App.
 //     Ohne Anmeldung antwortet die Function mit 401 und verweist per WWW-Authenticate auf
 //     …/mcp/.well-known/oauth-protected-resource; Zustimmung auf <SITE_URL>/oauth/consent.
 //   API-Key (Tabelle api_keys, nur Hash gespeichert): Authorization: Bearer <key> oder x-api-key
-//     (Claude Code, .mcp.json). Als Pfad …/mcp/<key> nicht mehr (abgeschaltet 12.11.2026).
+//     (Claude Code, .mcp.json). Ohne Nutzer-Token laufen diese Abfragen mit dem Service-Role-Schlüssel;
+//     jede Abfrage filtert deshalb zusätzlich ausdrücklich nach user_id.
+// Schutz: Origin-Prüfung (403), höchstens RATE_LIMIT Tool-Aufrufe pro Nutzer und Minute (429),
+// eine Logzeile pro Tool-Aufruf (Nutzer, Tool, Dauer, Ergebnis; keine Inhalte).
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { getProfiles, getQuotes, searchSymbols, SYMBOL_RE } from "../_shared/finnhub.ts";
 import { getChart, getNewsPage, isRange } from "../_shared/history.ts";
@@ -17,16 +22,33 @@ import { TOOLS } from "./tools.ts";
 const SITE_URL = Deno.env.get("SITE_URL") ?? "";
 
 const SERVER = { name: "stockdeck", version: "1.4.0" };
-const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
+const PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
+const RATE_LIMIT = 60;
 const MAX_ITEMS = 200;
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, content-type, mcp-protocol-version, mcp-session-id, x-api-key",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Expose-Headers": "WWW-Authenticate",
+const originOf = (url: string) => {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return "";
+  }
 };
+// Browser-Clients dürfen nur von hier kommen; Server-Clients (claude.ai, Claude Code) schicken keinen Origin
+const ALLOWED_ORIGINS = new Set(
+  [SITE_URL, "https://claude.ai", "https://claude.com", ...(Deno.env.get("MCP_ALLOWED_ORIGINS") ?? "").split(",")]
+    .map((o) => originOf(o.trim()))
+    .filter(Boolean),
+);
+
+function corsFor(origin: string | null) {
+  return {
+    "Access-Control-Allow-Origin": origin ?? "*",
+    "Access-Control-Allow-Headers": "authorization, content-type, mcp-protocol-version, mcp-session-id, x-api-key",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Expose-Headers": "WWW-Authenticate",
+    ...(origin ? { Vary: "Origin" } : {}),
+  };
+}
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 // Öffentliche Adresse der Function (SUPABASE_URL ist in der Edge Runtime die öffentliche Projekt-URL)
@@ -43,7 +65,7 @@ class ToolError extends Error {}
 function json(body: unknown, status = 200, extra: Record<string, string> = {}) {
   return new Response(body === null ? null : JSON.stringify(body), {
     status,
-    headers: { ...cors, "Content-Type": "application/json", ...extra },
+    headers: { "Content-Type": "application/json", ...extra },
   });
 }
 
@@ -63,8 +85,20 @@ function extractKey(req: Request): string | null {
   return null;
 }
 
-/** Nutzer-ID aus einem Supabase-Access-Token (OAuth), nur für freigeschaltete Konten. */
-async function oauthUser(token: string): Promise<string | null> {
+/** Claims eines JWT ohne Signaturprüfung (die macht danach Supabase Auth). */
+function claims(token: string): Record<string, unknown> | null {
+  try {
+    const part = token.split(".")[1].replaceAll("-", "+").replaceAll("_", "/");
+    return JSON.parse(atob(part.padEnd(part.length + ((4 - (part.length % 4)) % 4), "=")));
+  } catch {
+    return null;
+  }
+}
+
+/** Nutzer aus einem OAuth-Access-Token, nur für freigeschaltete Konten; db läuft mit seinen Rechten (RLS). */
+async function oauthUser(token: string): Promise<{ userId: string; db: SupabaseClient } | null> {
+  // Nur Tokens, die der OAuth-Server für einen Client ausgestellt hat: Login-Tokens der App haben kein client_id
+  if (typeof claims(token)?.client_id !== "string") return null;
   const db = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false },
@@ -72,7 +106,7 @@ async function oauthUser(token: string): Promise<string | null> {
   const { data, error } = await db.auth.getUser(token);
   if (error || !data.user) return null;
   const { data: allowed } = await db.rpc("is_allowed");
-  return allowed === true ? data.user.id : null;
+  return allowed === true ? { userId: data.user.id, db } : null;
 }
 
 function unauthorized() {
@@ -135,7 +169,8 @@ async function nextPosition(db: SupabaseClient, userId: string, groupId: string 
   return (data[0]?.position ?? -1) + 1;
 }
 
-async function callTool(db: SupabaseClient, userId: string, name: string, args: Record<string, unknown>) {
+/** db: Nutzerdaten (mit RLS bei OAuth); admin: gemeinsame Kurs-Caches. */
+async function callTool(db: SupabaseClient, admin: SupabaseClient, userId: string, name: string, args: Record<string, unknown>) {
   switch (name) {
     case "list_watchlist": {
       const [items, groups] = await Promise.all([
@@ -151,7 +186,7 @@ async function callTool(db: SupabaseClient, userId: string, name: string, args: 
       const rank = (gid: string | null) => (gid ? byId.get(gid)?.position ?? 0 : -1);
       const sorted = [...items.data].sort((a, b) => rank(a.group_id) - rank(b.group_id) || a.position - b.position);
       const syms = sorted.map((i) => i.symbol);
-      const [quoteList, profileList] = await Promise.all([getQuotes(db, syms), getProfiles(db, syms)]);
+      const [quoteList, profileList] = await Promise.all([getQuotes(admin, syms), getProfiles(admin, syms)]);
       const quotes = new Map(quoteList.map((q) => [q.symbol, q]));
       const names = new Map(profileList.map((p) => [p.symbol, p.name]));
       return {
@@ -214,7 +249,7 @@ async function callTool(db: SupabaseClient, userId: string, name: string, args: 
       if (!hit) {
         return { added: false, reason: `Ticker ${symbol} an US-Börsen nicht gefunden.`, suggestions: matches };
       }
-      const profile = (await getProfiles(db, [symbol]))[0];
+      const profile = (await getProfiles(admin, [symbol]))[0];
       const name =
         typeof args.name === "string" && args.name.trim() ? args.name.trim().slice(0, 100) : profile?.name || hit.name;
       const target = await resolveGroup(db, userId, args.group, true);
@@ -245,13 +280,13 @@ async function callTool(db: SupabaseClient, userId: string, name: string, args: 
     case "get_quotes": {
       const symbols = Array.isArray(args.symbols) ? args.symbols.map(normSymbol) : [];
       if (symbols.length === 0) throw new ToolError("symbols ist leer.");
-      return { quotes: await getQuotes(db, symbols) };
+      return { quotes: await getQuotes(admin, symbols) };
     }
 
     case "get_signals": {
       const symbols = Array.isArray(args.symbols) ? args.symbols.slice(0, 10).map(normSymbol) : [];
       if (symbols.length === 0) throw new ToolError("symbols ist leer.");
-      return { signals: await getSignals(db, symbols) };
+      return { signals: await getSignals(admin, symbols) };
     }
 
     case "get_chart": {
@@ -293,16 +328,16 @@ async function callTool(db: SupabaseClient, userId: string, name: string, args: 
     }
 
     default: {
-      const res = await callPortfolioTool(db, userId, name, args);
-      if (res === undefined) throw new ToolError(`Unbekanntes Tool: ${name}`);
-      return res;
+      return await callPortfolioTool(db, admin, userId, name, args);
     }
   }
 }
 
 // ---------- JSON-RPC ----------
 
-async function handle(msg: JsonRpcRequest, db: SupabaseClient, userId: string) {
+const TOOL_NAMES = new Set([...TOOLS, ...PORTFOLIO_TOOLS].map((t) => t.name));
+
+async function handle(msg: JsonRpcRequest, db: SupabaseClient, admin: SupabaseClient, userId: string) {
   const id = msg.id ?? null;
   switch (msg.method) {
     case "initialize": {
@@ -322,8 +357,13 @@ async function handle(msg: JsonRpcRequest, db: SupabaseClient, userId: string) {
     case "tools/call": {
       const name = String(msg.params?.name ?? "");
       const args = (msg.params?.arguments ?? {}) as Record<string, unknown>;
+      if (!TOOL_NAMES.has(name)) return fail(id, -32602, `Unknown tool: ${name}`);
+      const started = Date.now();
+      const log = (result: string) =>
+        console.log(JSON.stringify({ mcp: name, user: userId, ms: Date.now() - started, result }));
       try {
-        const result = await callTool(db, userId, name, args);
+        const result = await callTool(db, admin, userId, name, args);
+        log("ok");
         return ok(id, {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
           structuredContent: result,
@@ -331,6 +371,7 @@ async function handle(msg: JsonRpcRequest, db: SupabaseClient, userId: string) {
       } catch (e) {
         const known = e instanceof ToolError || e instanceof PortfolioError;
         if (!known) console.error(name, e);
+        log(known ? "tool_error" : "error");
         const text = known ? e.message : "Interner Fehler, bitte später erneut versuchen.";
         return ok(id, { content: [{ type: "text", text }], isError: true });
       }
@@ -341,7 +382,16 @@ async function handle(msg: JsonRpcRequest, db: SupabaseClient, userId: string) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  // Origin prüfen (Schutz gegen DNS-Rebinding): fremde Browser-Herkunft → 403
+  const origin = req.headers.get("origin");
+  const allowed = !origin || ALLOWED_ORIGINS.has(origin);
+  const res = allowed ? await route(req) : json(fail(null, -32600, "Origin not allowed"), 403);
+  for (const [k, v] of Object.entries(corsFor(allowed ? origin : null))) res.headers.set(k, v);
+  return res;
+});
+
+async function route(req: Request): Promise<Response> {
+  if (req.method === "OPTIONS") return new Response("ok");
   // OAuth Protected Resource Metadata (RFC 9728): verweist auf Supabase Auth als Autorisierungsserver
   if (req.method === "GET" && new URL(req.url).pathname.endsWith("/.well-known/oauth-protected-resource")) {
     return json({
@@ -354,15 +404,23 @@ Deno.serve(async (req) => {
   // Kein SSE-Stream und keine Sessions: GET/DELETE gibt es nicht.
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405, { Allow: "POST, OPTIONS" });
 
+  const version = req.headers.get("mcp-protocol-version");
+  if (version && !PROTOCOL_VERSIONS.includes(version)) {
+    return json(fail(null, -32600, `Unsupported protocol version ${version}; supported: ${PROTOCOL_VERSIONS.join(", ")}`), 400);
+  }
+
   const key = extractKey(req);
   if (!key) return unauthorized();
   const admin = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false },
   });
-  const userId = JWT_RE.test(key)
-    ? await oauthUser(key)
-    : (await admin.rpc("api_key_user", { p_hash: await sha256(key) })).data;
-  if (!userId) return unauthorized();
+  let auth: { userId: string; db: SupabaseClient } | null;
+  if (JWT_RE.test(key)) auth = await oauthUser(key);
+  else {
+    const { data } = await admin.rpc("api_key_user", { p_hash: await sha256(key) });
+    auth = data ? { userId: data as string, db: admin } : null;
+  }
+  if (!auth) return unauthorized();
 
   let body: unknown;
   try {
@@ -371,20 +429,23 @@ Deno.serve(async (req) => {
     return json(fail(null, -32700, "Parse error"), 400);
   }
 
-  const batch = Array.isArray(body);
-  const messages = (batch ? body : [body]) as JsonRpcRequest[];
-  if (messages.length === 0 || messages.some((m) => !m || typeof m.method !== "string")) {
-    // Antworten des Clients (ohne method) brauchen wir nicht
-    if (messages.every((m) => m && typeof m === "object" && !("method" in m))) return json(null, 202);
-    return json(fail(null, -32600, "Invalid Request"), 400);
+  // Seit 2025-06-18 gibt es keine JSON-RPC-Batches mehr
+  if (Array.isArray(body)) return json(fail(null, -32600, "Batch requests are not supported"), 400);
+  const m = body as JsonRpcRequest;
+  if (!m || typeof m !== "object") return json(fail(null, -32600, "Invalid Request"), 400);
+  // Antworten des Clients (ohne method) und Notifications (ohne id) bekommen keine Antwort
+  if (typeof m.method !== "string") {
+    return "result" in m || "error" in m ? json(null, 202) : json(fail(null, -32600, "Invalid Request"), 400);
   }
+  if (m.id === undefined) return json(null, 202);
 
-  const responses = [];
-  for (const m of messages) {
-    // Notifications (ohne id) bekommen keine Antwort
-    if (m.id === undefined) continue;
-    responses.push(await handle(m, admin, userId));
+  if (m.method === "tools/call") {
+    const { data: allowed, error } = await admin.rpc("mcp_take_call", { p_user: auth.userId, p_limit: RATE_LIMIT });
+    if (error) console.error("rate limit", error);
+    if (allowed === false) {
+      const retry = String(60 - new Date().getSeconds());
+      return json(fail(m.id, -32000, `Rate limit: at most ${RATE_LIMIT} tool calls per minute`), 429, { "Retry-After": retry });
+    }
   }
-  if (responses.length === 0) return json(null, 202);
-  return json(batch ? responses : responses[0]);
-});
+  return json(await handle(m, auth.db, admin, auth.userId));
+}

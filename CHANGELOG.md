@@ -22,6 +22,10 @@ All notable changes to this project are documented here. The format follows [Kee
 - A toast no longer disappears when switching between Watchlist, Portfolio and Account.
 - Company logos are copied once into a public Supabase Storage bucket and served from there with a 30-day cache. Finnhub's logo server sends no cache headers and sometimes fails, which left errors in the browser console.
 
+### Security
+
+- MCP server: accepts only tokens issued by the OAuth server (not app session tokens), runs OAuth calls with the user's own rights (RLS), limits tool calls to 60 per minute per user, rejects foreign browser origins, unsupported protocol versions and batch requests, and logs one line per tool call. Protocol version 2025-11-25 added.
+
 ## [1.0.0] – 2026-11-13
 
 First public version.

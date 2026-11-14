@@ -93,11 +93,17 @@ async function findPortfolio(db: SupabaseClient, userId: string, raw: unknown, c
 
 const num = (v: unknown, def = 0) => (v == null || v === "" ? def : Number(v));
 
-export async function callPortfolioTool(db: SupabaseClient, userId: string, name: string, args: Record<string, unknown>) {
+export async function callPortfolioTool(
+  db: SupabaseClient,
+  admin: SupabaseClient,
+  userId: string,
+  name: string,
+  args: Record<string, unknown>,
+) {
   switch (name) {
     case "list_portfolio": {
       const filter = typeof args.portfolio === "string" && args.portfolio.trim() ? args.portfolio.trim() : undefined;
-      const res = await portfolioOverview(db, userId, filter);
+      const res = await portfolioOverview(db, admin, userId, filter);
       if (filter && res.portfolios.length === 0) throw new PortfolioError(`Depot "${filter}" gibt es nicht.`);
       return res;
     }
@@ -117,7 +123,7 @@ export async function callPortfolioTool(db: SupabaseClient, userId: string, name
       const pf = await findPortfolio(db, userId, args.portfolio, true);
       // ISINs ohne Ticker vorab auflösen
       const isins = list.filter((t) => !t.symbol && t.isin).map((t) => String(t.isin).trim().toUpperCase());
-      const resolved = new Map((await resolveIsins(db, isins)).map((r) => [r.isin, r]));
+      const resolved = new Map((await resolveIsins(admin, isins)).map((r) => [r.isin, r]));
       const errors: { index: number; error: string }[] = [];
       const rows: Record<string, unknown>[] = [];
       list.forEach((t, index) => {
@@ -179,5 +185,5 @@ export async function callPortfolioTool(db: SupabaseClient, userId: string, name
       };
     }
   }
-  return undefined;
+  throw new PortfolioError(`Unbekanntes Tool: ${name}`);
 }
