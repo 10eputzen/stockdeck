@@ -82,7 +82,8 @@ export default defineConfig(({ mode }) => {
             },
             {
               // Firmenlogos von Finnhub ändern sich praktisch nie
-              urlPattern: ({ url }) => url.hostname.endsWith('finnhub.io') && url.pathname.includes('/stock_logo/'),
+              urlPattern: ({ url }) =>
+                (url.hostname === 'finnhub.io' || url.hostname.endsWith('.finnhub.io')) && url.pathname.includes('/stock_logo/'),
               handler: 'CacheFirst',
               options: {
                 cacheName: 'logos',
