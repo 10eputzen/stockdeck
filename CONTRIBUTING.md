@@ -23,6 +23,16 @@ CI runs the same checks on every pull request.
 - Never commit instance values or secrets (project refs, URLs of your deployment, keys, tokens). They belong in `.env`, `setup.env` or your Supabase secrets.
 - Add a line to the `Unreleased` section of [CHANGELOG.md](CHANGELOG.md) for changes users notice.
 
+## Bank connectors
+
+New banks are welcome as connectors in `connectors/`, see [connectors/README.md](connectors/README.md). They are for personal use only, and the privacy rules are not negotiable:
+
+- Connectors run locally. The user logs in inside the bank tool; credentials are never read, stored, logged or sent anywhere.
+- Only date, type, ISIN, quantity, amount, currency, fees and taxes leave a connector. No IBANs, account numbers, names, addresses, counterparties or payment references.
+- Data goes only to the user's own instance or a local file, never to the project, third parties or telemetry.
+- Tests, fixtures, issues and logs contain made-up data only. Never paste real exports, not even shortened ones.
+- Follow the checklist in `connectors/_template/index.ts`.
+
 ## Translations
 
 A new language is one file: copy `src/locales/en.json` to `src/locales/<code>.json`, translate the values and register it in `src/i18n/index.ts`.

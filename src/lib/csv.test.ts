@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { holdings, valuate } from '../../supabase/functions/_shared/positions.ts'
+import { normalize, toCsv } from '../../connectors/core/normalize.ts'
+import { importable } from '../../connectors/core/upload.ts'
 import { parseCsv, parseNum } from './csv'
 
 describe('parseNum', () => {
@@ -36,6 +38,24 @@ describe('parseCsv', () => {
     // Zwei gleiche Käufe am selben Tag bleiben zwei Transaktionen, ein zweiter Import erkennt beide wieder
     expect(a.rows[0].external_id).not.toBe(a.rows[1].external_id)
     expect(b.rows.map((r) => r.external_id)).toEqual(a.rows.map((r) => r.external_id))
+  })
+})
+
+describe('Bank-Konnektor-Datei (erfundene Daten)', () => {
+  const { rows } = normalize('demo-bank', [
+    { date: '2026-01-11', type: 'buy', isin: 'US0000000001', quantity: 2, amount: 200, fees: 1 },
+    { date: '2026-03-01', type: 'dividend', isin: 'US0000000001', amount: 3, taxes: 0.75 },
+    { date: '2026-01-10', type: 'deposit', amount: 1000 },
+  ])
+
+  it('liest stockdeck-v1 wie der Direkt-Upload, Bargeld wird übersprungen', () => {
+    const r = parseCsv(toCsv(rows))
+    expect(r.format).toBe('connector')
+    expect(r.rows.map(({ line: _line, symbol: _symbol, name: _name, ...tx }) => tx)).toEqual(importable(rows))
+    expect(r.rows[0]).toMatchObject({ type: 'buy', quantity: 2, price: 100, fees: 1 })
+    expect(r.skipped).toHaveLength(1)
+    // Wiederholter Import ergibt dieselben IDs → Dubletten werden erkannt
+    expect(parseCsv(toCsv(rows)).rows.map((x) => x.external_id)).toEqual(r.rows.map((x) => x.external_id))
   })
 })
 

@@ -1,5 +1,8 @@
 import { t } from '../i18n'
 import type { TxType } from './supabase'
+import { toStockdeck } from '../../connectors/core/toStockdeck.ts'
+import { FORMAT as CONNECTOR_FORMAT } from '../../connectors/core/normalize.ts'
+import { KINDS, type Kind } from '../../connectors/core/types.ts'
 
 /** Eine Zeile aus der CSV, bereit zum Anlegen (Symbol ggf. erst nach ISIN-Auflösung). */
 export type ParsedTx = {
@@ -18,7 +21,7 @@ export type ParsedTx = {
 }
 
 export type ParseResult = {
-  format: 'parqet' | 'einfach'
+  format: 'parqet' | 'einfach' | 'connector'
   rows: ParsedTx[]
   skipped: { line: number; reason: string }[]
 }
@@ -140,6 +143,7 @@ export function parseCsv(text: string): ParseResult {
     }
     return -1
   }
+  if (head.includes('format') && head.includes('bank')) return parseConnector(lines, headerIdx, sep, head)
   const format: ParseResult['format'] = head.includes('shares') || head.includes('holdingname') || head.includes('identifier') ? 'parqet' : 'einfach'
   const c = Object.fromEntries(Object.keys(ALIASES).map((k) => [k, col(k)])) as Record<keyof typeof ALIASES, number>
   const rows: ParsedTx[] = []
@@ -201,4 +205,56 @@ export function parseCsv(text: string): ParseResult {
     rows.push({ line, type, date, symbol, isin, name: get(c.name) || null, quantity, price, currency, fees, taxes, external_id })
   }
   return { format, rows, skipped }
+}
+
+/** Reads the normalized file of the local bank connectors (`npm run connect`, format stockdeck-v1). */
+function parseConnector(lines: string[], headerIdx: number, sep: string, head: string[]): ParseResult {
+  const rows: ParsedTx[] = []
+  const skipped: ParseResult['skipped'] = []
+  for (let i = headerIdx + 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue
+    const line = i + 1
+    const f = splitLine(lines[i], sep)
+    const get = (k: string) => f[head.indexOf(k)] ?? ''
+    const type = get('type') as Kind
+    if (get('format') !== CONNECTOR_FORMAT || !(KINDS as readonly string[]).includes(type)) {
+      skipped.push({ line, reason: t('common.csvSkipUnknownType', { type: get('type') }) })
+      continue
+    }
+    const date = parseDate(get('date'))
+    const num = (k: string) => Number(get(k) || 0)
+    const isin = get('isin').toUpperCase()
+    const values = [num('quantity'), num('amount'), num('fees'), num('taxes')]
+    if (!date) {
+      skipped.push({ line, reason: t('common.csvSkipMissingDate') })
+      continue
+    }
+    if (values.some((n) => !Number.isFinite(n))) {
+      skipped.push({ line, reason: t('common.csvSkipInvalidNumber') })
+      continue
+    }
+    const [quantity, amount, fees, taxes] = values
+    const m = toStockdeck({
+      bank: get('bank'),
+      date,
+      type,
+      isin: ISIN_RE.test(isin) ? isin : null,
+      quantity,
+      amount,
+      currency: (get('currency') || 'EUR').toUpperCase(),
+      fees,
+      taxes,
+      id: get('id'),
+    })
+    if (!m.tx) {
+      skipped.push({ line, reason: m.skip === 'cash' ? t('common.csvSkipCash', { type }) : t('common.csvSkipMissingIdent') })
+      continue
+    }
+    if (!m.tx.external_id) {
+      skipped.push({ line, reason: t('common.csvSkipMissingIdent') })
+      continue
+    }
+    rows.push({ line, symbol: null, name: null, ...m.tx })
+  }
+  return { format: 'connector', rows, skipped }
 }
