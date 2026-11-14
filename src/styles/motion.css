@@ -1,0 +1,30 @@
+/* ===== Bewegung (Variante „Schiene“): leuchtende Linie gleitet zum aktiven Reiter, Seite schiebt sich in Laufrichtung herein ===== */
+.pageview { min-width: 0; }
+/* --dx setzt PageView: positiv = von rechts (weiter nach rechts in der Navigation), negativ = von links */
+.pageview.in { animation: pagein 300ms cubic-bezier(.2, .8, .2, 1) backwards; }
+@keyframes pagein { from { opacity: 0; transform: translateX(var(--dx, 0)); } }
+
+.navind {
+  position: absolute; height: 2px; background: var(--accent); pointer-events: none;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 60%, transparent);
+  transition: transform 420ms cubic-bezier(.34, 1.36, .5, 1), width 420ms cubic-bezier(.34, 1.36, .5, 1);
+}
+
+/* Desktop: Unterstrich gleitet (Lage und Breite misst DeskTabs) */
+.desktabs { position: relative; }
+.desktabs button, .desktabs button.active { border-bottom-color: transparent; transition: color .2s; }
+.desktabs .navind { left: 0; bottom: -1px; width: 0; }
+
+/* Handy: Linie oben an der Leiste, Symbol hebt sich leicht */
+@media (max-width: 767px) {
+  .bottomnav { overflow-x: clip; }
+  .bottomnav .navind { top: -1px; left: 0; width: calc(100% / 3); transform: translateX(calc(var(--i, 0) * 100%)); }
+  .bottomnav button { transition: color .25s; }
+  .bottomnav svg { transition: transform 300ms cubic-bezier(.34, 1.56, .64, 1); }
+  .bottomnav button.active svg { transform: translateY(-2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pageview.in { animation: none; }
+  .navind, .bottomnav button, .bottomnav svg, .desktabs button { transition: none !important; }
+}

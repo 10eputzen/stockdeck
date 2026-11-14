@@ -1,12 +1,10 @@
 import { ImportDialog } from "../ImportDialog";
 import type { Group, SharedList, WatchItem } from "../lib/supabase";
-import type { Route } from "../lib/nav";
 import { Toast, type ToastState } from "../Toast";
-import { BottomNav } from "./Nav";
 import { ShareDialog } from "./ShareDialog";
 import type { useSharedActions } from "./useSharedActions";
 
-/** Toast, Teilen- und Import-Dialog sowie die Handy-Navigation; auf jeder Seite gleich. */
+/** Toast, Teilen- und Import-Dialog; auf jeder Seite gleich. */
 export function WatchDialogs({
   toast,
   onCloseToast,
@@ -20,9 +18,6 @@ export function WatchDialogs({
   items,
   onCloseImport,
   onImported,
-  showNav,
-  route,
-  go,
 }: {
   toast: ToastState;
   onCloseToast: () => void;
@@ -36,9 +31,6 @@ export function WatchDialogs({
   items: WatchItem[];
   onCloseImport: () => void;
   onImported: (text: string) => void;
-  showNav: boolean;
-  route: Route;
-  go: (r: Route) => void;
 }) {
   return (
     <>
@@ -57,7 +49,6 @@ export function WatchDialogs({
       {importOpen && (
         <ImportDialog groups={groups} items={items} onClose={onCloseImport} onDone={onImported} />
       )}
-      {showNav && <BottomNav route={route} go={go} />}
     </>
   );
 }

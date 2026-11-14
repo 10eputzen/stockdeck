@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { t } from "../i18n";
 import type { Route } from "../lib/nav";
@@ -33,8 +33,26 @@ const TABS: { route: Route; label: string }[] = [
 /** Reiter auf dem Desktop: Watchlist und Portfolio. */
 export function DeskTabs({ route, go }: { route: Route; go: (r: Route) => void }) {
   const { t } = useTranslation();
+  const nav = useRef<HTMLElement>(null);
+  const bar = useRef<HTMLSpanElement>(null);
+  // Markierung unter dem aktiven Reiter: Lage und Breite messen, damit sie zwischen unterschiedlich breiten Reitern gleitet
+  useLayoutEffect(() => {
+    const el = nav.current;
+    if (!el) return;
+    const place = () => {
+      const btn = el.querySelector<HTMLElement>("button.active");
+      if (!btn || !bar.current) return;
+      bar.current.style.transform = `translateX(${btn.offsetLeft}px)`;
+      bar.current.style.width = `${btn.offsetWidth}px`;
+    };
+    place();
+    const ro = new ResizeObserver(place);
+    el.querySelectorAll("button").forEach((b) => ro.observe(b));
+    return () => ro.disconnect();
+  }, [route]);
   return (
-    <nav className="desktabs" aria-label={t("watchlist.sectionsNav")}>
+    <nav className="desktabs" aria-label={t("watchlist.sectionsNav")} ref={nav}>
+      <span className="navind" ref={bar} aria-hidden="true" />
       {(["liste", "portfolio", "konto"] as const).map((r) => (
         <button
           key={r}
@@ -58,8 +76,10 @@ export function BottomNav({ route, go }: { route: Route; go: (r: Route) => void 
   const { t } = useTranslation();
   // Die Suche gehört zur Watchlist (runder Button dort), deshalb bleibt deren Reiter aktiv
   const active = route === "suche" ? "liste" : route;
+  const index = TABS.findIndex((tab) => tab.route === active);
   return (
     <nav className="bottomnav" aria-label={t("watchlist.mainNav")}>
+      <span className="navind" style={{ "--i": index } as CSSProperties} aria-hidden="true" />
       {TABS.map((tab) => (
         <button
           key={tab.route}

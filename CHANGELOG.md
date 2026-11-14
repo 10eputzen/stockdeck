@@ -8,6 +8,11 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - `npm run setup`: one command sets up a new instance on a hosted Supabase project (migrations, secrets, functions, auth, first admin, frontend `.env`). The README quickstart shrinks to four steps.
 - `npm run setup -- --self-hosted <folder>`: the same setup for the official self-hosted Supabase stack (Docker), tested against the official stack.
+- Navigation animations: a glowing line glides to the active tab (bottom bar on phones, underline on desktop) and pages slide in from the direction of the tab. Respects reduced motion.
+
+### Fixed
+
+- A toast no longer disappears when switching between Watchlist, Portfolio and Account.
 
 ## [1.0.0] – 2026-11-13
 

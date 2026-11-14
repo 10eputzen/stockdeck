@@ -1,6 +1,6 @@
 import { DndContext } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { lazy, Suspense, useCallback, useMemo, useState, type CSSProperties } from "react";
+import { lazy, Suspense, type ReactNode, useCallback, useMemo, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { COL_GAP, gridTemplate, useColumns } from "./lib/columns";
 import type { SharedItem, WatchItem } from "./lib/supabase";
@@ -12,7 +12,8 @@ import { useListActions } from "./watchlist/useListActions";
 import { useSharedActions } from "./watchlist/useSharedActions";
 import { byPos, containerOf, NONE } from "./watchlist/model";
 import { rowData } from "./watchlist/rowData";
-import { DeskTabs } from "./watchlist/Nav";
+import { BottomNav, DeskTabs } from "./watchlist/Nav";
+import { PageView } from "./ui/PageView";
 import { Container, GroupSection, HeaderRow } from "./watchlist/Groups";
 import { SearchSheet, WatchHeader } from "./watchlist/Header";
 import { AccountPage } from "./watchlist/AccountPage";
@@ -203,15 +204,24 @@ export function Watchlist({
         setToast({ text });
         loadAll();
       }}
-      showNav={narrow && !loc.symbol}
-      route={route}
-      go={go}
     />
   );
-  const deskTabs = !narrow && <DeskTabs route={page} go={go} />;
+  // Navigation und Dialoge bleiben beim Seitenwechsel stehen (gleitende Markierung, Toast bleibt sichtbar);
+  // nur der Seiteninhalt wird getauscht und blendet ein
+  const frame = (body: ReactNode) => (
+    <>
+      {!narrow && !loc.symbol && <DeskTabs route={page} go={go} />}
+      <PageView
+        id={loc.symbol ? `s/${loc.symbol}` : page === "suche" ? "liste" : page}
+        order={loc.symbol ? 3 : page === "portfolio" ? 1 : page === "konto" ? 2 : 0}
+      >{body}</PageView>
+      {dialogs}
+      {narrow && !loc.symbol && <BottomNav route={route} go={go} />}
+    </>
+  );
 
   if (loc.symbol)
-    return (
+    return frame(
       <>
         <Suspense
           fallback={<div className="detail-loading sk" aria-hidden="true" />}
@@ -231,14 +241,12 @@ export function Watchlist({
             }
           />
         </Suspense>
-        {dialogs}
       </>
     );
 
   if (page === "portfolio")
-    return (
+    return frame(
       <>
-        {deskTabs}
         <Suspense
           fallback={<div className="detail-loading sk" aria-hidden="true" />}
         >
@@ -249,14 +257,11 @@ export function Watchlist({
             onToast={(text) => setToast({ text })}
           />
         </Suspense>
-        {dialogs}
       </>
     );
 
   if (page === "konto")
-    return (
-      <>
-        {deskTabs}
+    return frame(
         <AccountPage
           email={email}
           cols={cols}
@@ -269,16 +274,12 @@ export function Watchlist({
           }}
           onImport={() => setImportOpen(true)}
           onSignOut={onSignOut}
-        >
-          {dialogs}
-        </AccountPage>
-      </>
+        />
     );
 
-  return (
+  return frame(
     <section>
       <div className={`refreshbar ${refreshing ? "on" : ""}`} aria-hidden="true" />
-      {deskTabs}
       <WatchHeader
         narrow={narrow}
         editMode={editMode}
@@ -390,7 +391,6 @@ export function Watchlist({
       )}
 
       <StatusLine error={error} refreshing={refreshing} updated={updated} />
-      {dialogs}
     </section>
   );
 }
