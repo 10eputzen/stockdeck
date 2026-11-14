@@ -38,6 +38,8 @@ Cash bookings (deposits, withdrawals, interest, taxes without a security) are re
 
 ## Available connectors
 
+Only the connectors below exist, and only Trade Republic is tested and maintained. Every other bank or broker is unsupported: build a connector yourself (see [Adding a bank](#adding-a-bank)), test it with your own account and at your own risk. Banks change their interfaces without notice, so a connector can stop working at any time.
+
 | Bank | Id | Bank tool | Notes |
 | --- | --- | --- | --- |
 | Trade Republic | `trade-republic` (`tr`) | [pytr](https://github.com/pytr-org/pytr) (`pipx install pytr`) | Login with phone number and PIN, confirmed in the app. Credentials are never stored (no `--store_credentials`). Pending orders without shares are skipped. |

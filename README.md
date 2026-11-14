@@ -174,6 +174,8 @@ CI runs lint, type check and tests on pull requests (`.github/workflows/ci.yml`)
 
 `npm run connect -- tr --upload` reads your Trade Republic transactions on your own computer and uploads them into your instance. You log in inside the bank tool yourself, and credentials are never stored. Only date, type, ISIN, quantity, amount, currency, fees and taxes are kept. IBANs, names, counterparties and payment references are dropped, and nothing goes to third parties.
 
+**Supported banks:** only Trade Republic is tested and maintained. Other banks and brokers are not supported. If you want one, build a connector yourself from the template and try it with your own account; see [Adding a bank](connectors/README.md#adding-a-bank). Pull requests are welcome, but there is no promise that a connector keeps working when a bank changes its interface.
+
 **Personal use only:** connectors may use unofficial interfaces that no bank endorses. Use them only for your own accounts and at your own risk. Details, options and how to add a bank: [connectors/README.md](connectors/README.md).
 
 ## Contributing
