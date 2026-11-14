@@ -7,7 +7,7 @@
 // oder die Live-Seite Konsolenfehler oder -warnungen zeigt.
 //
 // Instanzwerte stehen nicht im Repo. Reihenfolge: Umgebung, dann .env.deploy und .env (beide gitignored),
-// dann – wenn STOCKDECK_GCP_PROJECT gesetzt ist – das Secret stockdeck-instance-env (dotenv-Format) im
+// dann – wenn STOCKDECK_GCP_PROJECT (Umgebung oder .env.deploy) gesetzt ist – das Secret stockdeck-instance-env (dotenv-Format) im
 // Secret Manager dieses GCP-Projekts. Benötigt:
 //   VITE_SUPABASE_URL, VITE_SITE_URL, VITE_VAPID_PUBLIC_KEY, CLOUDFLARE_ACCOUNT_ID, optional PAGES_PROJECT (Standard stockdeck)
 // Tokens: SUPABASE_ACCESS_TOKEN (oder VITE_SUPABASE_PUBLISHABLE_KEY direkt) und CLOUDFLARE_API_TOKEN, sonst die Secrets
@@ -43,11 +43,11 @@ function parseEnv(text) {
   return out;
 }
 
-const GCP_PROJECT = process.env.STOCKDECK_GCP_PROJECT ?? "";
 const fileEnv = Object.assign(
   {},
   ...[".env", ".env.deploy"].filter((f) => existsSync(f)).map((f) => parseEnv(readFileSync(f, "utf8")))
 );
+const GCP_PROJECT = process.env.STOCKDECK_GCP_PROJECT || fileEnv.STOCKDECK_GCP_PROJECT || "";
 const REQUIRED = ["VITE_SUPABASE_URL", "VITE_SITE_URL", "VITE_VAPID_PUBLIC_KEY", "CLOUDFLARE_ACCOUNT_ID"];
 const missing = REQUIRED.some((k) => !process.env[k] && !fileEnv[k]);
 const smEnv = GCP_PROJECT && missing ? parseEnv(await secret("stockdeck-instance-env", { optional: true })) : {};
