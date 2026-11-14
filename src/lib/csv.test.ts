@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { holdings, valuate } from '../../supabase/functions/_shared/positions.ts'
 import { normalize, toCsv } from '../../connectors/core/normalize.ts'
 import { importable } from '../../connectors/core/upload.ts'
-import { parseCsv, parseNum } from './csv'
+import type { Transaction } from './supabase'
+import { exportCsv, parseCsv, parseNum } from './csv'
 
 describe('parseNum', () => {
   it('liest deutsche und englische Schreibweise', () => {
@@ -41,6 +42,43 @@ describe('parseCsv', () => {
   })
 })
 
+describe('exportCsv (erfundene Daten)', () => {
+  const base = { portfolio_id: 'p1', source: 'manual', created_at: '2026-01-01T00:00:00Z', fx_rate: null, note: null, name: null, isin: null, fees: 0, taxes: 0 }
+  const txs: Transaction[] = [
+    { ...base, id: 'a', symbol: 'AAPL', isin: 'US0000000001', name: 'Demo; "Inc"', type: 'buy', date: '2026-01-11', quantity: 2.5, price: 101.25, currency: 'USD', fees: 1, fx_rate: 1.0832, note: 'erste\nZeile', external_id: null },
+    { ...base, id: 'b', symbol: 'SAP.DE', type: 'dividend', date: '2026-03-01', quantity: 0, price: 3.4, currency: 'EUR', taxes: -0.85, external_id: 'parqet:abc123' },
+    { ...base, id: 'c', symbol: 'SAP.DE', type: 'split', date: '2026-04-01', quantity: 2, price: 0, currency: 'EUR', external_id: 'demo-bank:x1-1' },
+    { ...base, id: 'd', symbol: 'AAPL', type: 'transfer_out', date: '2026-05-01', quantity: 1, price: 0, currency: 'USD', external_id: 'einfach:zz-1' },
+  ]
+
+  it('lässt sich 1:1 wieder importieren', () => {
+    const r = parseCsv(exportCsv(txs, [{ id: 'p1', name: 'Depot', currency: 'EUR', position: 0, collapsed: false }]))
+    expect(r.format).toBe('einfach')
+    expect(r.skipped).toEqual([])
+    expect(r.rows.map(({ line: _line, ...tx }) => tx)).toEqual(
+      txs.map((tx) => ({
+        type: tx.type,
+        date: tx.date,
+        symbol: tx.symbol,
+        isin: tx.isin,
+        name: tx.name,
+        quantity: tx.quantity,
+        price: tx.price,
+        currency: tx.currency,
+        fees: tx.fees,
+        taxes: tx.taxes,
+        fx_rate: tx.fx_rate,
+        note: tx.note?.replace('\n', ' ') ?? null,
+        external_id: tx.external_id ?? `stockdeck:${tx.id}`,
+      })),
+    )
+  })
+
+  it('liefert für leere Depots nur die Kopfzeile', () => {
+    expect(exportCsv([], []).trim().split('\n')).toHaveLength(1)
+  })
+})
+
 describe('Bank-Konnektor-Datei (erfundene Daten)', () => {
   const { rows } = normalize('demo-bank', [
     { date: '2026-01-11', type: 'buy', isin: 'US0000000001', quantity: 2, amount: 200, fees: 1 },
@@ -51,7 +89,7 @@ describe('Bank-Konnektor-Datei (erfundene Daten)', () => {
   it('liest stockdeck-v1 wie der Direkt-Upload, Bargeld wird übersprungen', () => {
     const r = parseCsv(toCsv(rows))
     expect(r.format).toBe('connector')
-    expect(r.rows.map(({ line: _line, symbol: _symbol, name: _name, ...tx }) => tx)).toEqual(importable(rows))
+    expect(r.rows.map(({ line: _line, symbol: _symbol, name: _name, fx_rate: _fx, note: _note, ...tx }) => tx)).toEqual(importable(rows))
     expect(r.rows[0]).toMatchObject({ type: 'buy', quantity: 2, price: 100, fees: 1 })
     expect(r.skipped).toHaveLength(1)
     // Wiederholter Import ergibt dieselben IDs → Dubletten werden erkannt

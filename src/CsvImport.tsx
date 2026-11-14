@@ -83,6 +83,8 @@ export function CsvImport({
             currency: r.currency,
             fees: r.fees,
             taxes: r.taxes,
+            fx_rate: r.fx_rate,
+            note: r.note,
             source: parsed.format === 'parqet' ? 'parqet' : 'csv',
             external_id: r.external_id,
           },

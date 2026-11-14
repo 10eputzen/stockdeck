@@ -1,5 +1,5 @@
 import { t } from '../i18n'
-import type { TxType } from './supabase'
+import type { Portfolio, Transaction, TxType } from './supabase'
 import { toStockdeck } from '../../connectors/core/toStockdeck.ts'
 import { FORMAT as CONNECTOR_FORMAT } from '../../connectors/core/normalize.ts'
 import { KINDS, type Kind } from '../../connectors/core/types.ts'
@@ -17,6 +17,8 @@ export type ParsedTx = {
   currency: string
   fees: number
   taxes: number
+  fx_rate: number | null
+  note: string | null
   external_id: string
 }
 
@@ -126,6 +128,8 @@ const ALIASES: Record<string, string[]> = {
   fee: ['fee', 'fees', 'gebühren', 'gebuehren', 'gebühr'],
   tax: ['tax', 'taxes', 'steuern', 'steuer'],
   currency: ['currency', 'währung', 'waehrung'],
+  fx_rate: ['fx_rate'],
+  note: ['note', 'notiz'],
 }
 
 /** Liest einen Parqet-Export (Semikolon, deutsche Zahlen) oder das einfache eigene Format. */
@@ -188,21 +192,24 @@ export function parseCsv(text: string): ParseResult {
     if (!price && quantity && amount && type !== 'split') price = amount / quantity
     const fees = Math.abs(parseNum(get(c.fee)))
     const taxes = parseNum(get(c.tax))
-    if ([quantity, price, fees, taxes].some((n) => Number.isNaN(n))) {
+    const fx_rate = get(c.fx_rate) ? parseNum(get(c.fx_rate)) : null
+    if ([quantity, price, fees, taxes, fx_rate ?? 0].some((n) => Number.isNaN(n))) {
       skipped.push({ line, reason: t('common.csvSkipInvalidNumber') })
       continue
     }
     const currency = (get(c.currency) || 'EUR').toUpperCase()
     const id = get(c.id)
     let external_id: string
-    if (id) external_id = `${format}:${id}`
+    // IDs aus dem eigenen Export tragen schon ein Präfix und bleiben unverändert, damit ein Re-Import Dubletten erkennt
+    if (id) external_id = id.includes(':') ? id : `${format}:${id}`
     else {
       const key = [type, date, isin ?? symbol, quantity, price, fees, taxes].join('|')
       const n = (seen.get(key) ?? 0) + 1
       seen.set(key, n)
       external_id = `${format}:${hash(key)}-${n}`
     }
-    rows.push({ line, type, date, symbol, isin, name: get(c.name) || null, quantity, price, currency, fees, taxes, external_id })
+    const note = get(c.note) || null
+    rows.push({ line, type, date, symbol, isin, name: get(c.name) || null, quantity, price, currency, fees, taxes, fx_rate, note, external_id })
   }
   return { format, rows, skipped }
 }
@@ -254,7 +261,44 @@ function parseConnector(lines: string[], headerIdx: number, sep: string, head: s
       skipped.push({ line, reason: t('common.csvSkipMissingIdent') })
       continue
     }
-    rows.push({ line, symbol: null, name: null, ...m.tx })
+    rows.push({ line, symbol: null, name: null, fx_rate: null, note: null, ...m.tx })
   }
   return { format: 'connector', rows, skipped }
+}
+
+const EXPORT_COLS = ['date', 'type', 'symbol', 'isin', 'name', 'quantity', 'price', 'currency', 'fees', 'taxes', 'fx_rate', 'note', 'id', 'portfolio'] as const
+
+function cell(v: string | number | null | undefined): string {
+  const s = String(v ?? '').replace(/\r?\n/g, ' ')
+  return /[;"]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+/**
+ * Transactions in the simple format (semicolon, ISO dates, dot decimals), re-importable 1:1.
+ * The id column carries the existing external_id (or a stable one for manual entries), so a
+ * re-import into the same account recognises duplicates.
+ */
+export function exportCsv(txs: Transaction[], portfolios: Portfolio[]): string {
+  const names = new Map(portfolios.map((p) => [p.id, p.name]))
+  const lines = txs.map((tx) =>
+    [
+      tx.date,
+      tx.type,
+      tx.symbol,
+      tx.isin,
+      tx.name,
+      tx.quantity,
+      tx.price,
+      tx.currency,
+      tx.fees,
+      tx.taxes,
+      tx.fx_rate,
+      tx.note,
+      tx.external_id ?? `stockdeck:${tx.id}`,
+      names.get(tx.portfolio_id),
+    ]
+      .map(cell)
+      .join(';'),
+  )
+  return [EXPORT_COLS.join(';'), ...lines].join('\n') + '\n'
 }

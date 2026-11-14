@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { holdings, sum, valuate } from '../supabase/functions/_shared/positions.ts'
 import { CsvImport } from './CsvImport'
 import { readCache, writeCache } from './lib/cache'
+import { exportCsv } from './lib/csv'
 import { eur, pct } from './lib/format'
 import {
   fetchFx,
@@ -150,6 +151,19 @@ export function PortfolioPage({
     load()
   }
 
+  function exportTxs(p?: Portfolio) {
+    if (!data) return
+    const txs = p ? data.txs.filter((tx) => tx.portfolio_id === p.id) : data.txs
+    const slug = p ? p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'depot' : 'all'
+    const url = URL.createObjectURL(new Blob(['\ufeff' + exportCsv(txs, data.portfolios)], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `stockdeck-${slug}-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    onToast(t('portfolio.exported', { count: txs.length }))
+  }
+
   const done = (text: string) => {
     setDialog(null)
     onToast(text)
@@ -183,6 +197,11 @@ export function PortfolioPage({
           <button className="ghost" onClick={() => setDialog('csv')} disabled={loading}>
             {t('portfolio.import')}
           </button>
+          {!narrow && (
+            <button className="ghost" onClick={() => exportTxs()} disabled={!data?.txs.length}>
+              {t('portfolio.export')}
+            </button>
+          )}
           {!narrow && (
             <button className="ghost" onClick={addPortfolio} disabled={loading}>
               {t('portfolio.addDepot')}
@@ -232,7 +251,7 @@ export function PortfolioPage({
                       <span className={`num small pf-headchg ${dirOf(mode === 'day' ? tot.day : tot.gain)}`}>
                         {(mode === 'day' ? tot.day_pct : tot.gain_pct) == null ? '' : pct.format((mode === 'day' ? tot.day_pct : tot.gain_pct)!)}
                       </span>
-                      <PfMenu onRename={() => renamePortfolio(p)} onDelete={() => deletePortfolio(p)} />
+                      <PfMenu onRename={() => renamePortfolio(p)} onExport={() => exportTxs(p)} onDelete={() => deletePortfolio(p)} />
                     </div>
                     {!p.collapsed &&
                       (rows.length ? (

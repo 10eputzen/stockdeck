@@ -7,7 +7,7 @@ import { Logo } from '../ui/Logo'
 import { Sk } from '../ui/Skeleton'
 import { pfDir as dirOf, qty, share } from './format'
 
-export function PfMenu({ onRename, onDelete }: { onRename: () => void; onDelete: () => void }) {
+export function PfMenu({ onRename, onExport, onDelete }: { onRename: () => void; onExport: () => void; onDelete: () => void }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   return (
@@ -19,6 +19,9 @@ export function PfMenu({ onRename, onDelete }: { onRename: () => void; onDelete:
         <span className="pf-pop" role="menu" onMouseLeave={() => setOpen(false)}>
           <button role="menuitem" onClick={() => (setOpen(false), onRename())}>
             {t('portfolio.rename')}
+          </button>
+          <button role="menuitem" onClick={() => (setOpen(false), onExport())}>
+            {t('portfolio.exportCsv')}
           </button>
           <button role="menuitem" className="danger-text" onClick={() => (setOpen(false), onDelete())}>
             {t('portfolio.deleteConfirm')}
