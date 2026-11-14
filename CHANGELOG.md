@@ -24,6 +24,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Security
 
+- Build tooling: `glob` (via `workbox-build`) pinned to a patched version through an npm override; fixes the `glob` and `minimatch` advisories.
 - MCP server: accepts only tokens issued by the OAuth server (not app session tokens), runs OAuth calls with the user's own rights (RLS), limits tool calls to 60 per minute per user, rejects foreign browser origins, unsupported protocol versions and batch requests, and logs one line per tool call. Protocol version 2025-11-25 added.
 
 ## [1.0.0] – 2026-11-13
