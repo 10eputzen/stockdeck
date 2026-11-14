@@ -1,7 +1,7 @@
 // All data in this file is made up.
 import { describe, expect, it, vi } from 'vitest'
 import { normalize } from './normalize.ts'
-import { upload } from './upload.ts'
+import { daysSince, lastImportDate, upload } from './upload.ts'
 
 const { rows } = normalize('demo-bank', [
   { date: '2026-01-11', type: 'buy', isin: 'US0000000001', quantity: 2, amount: 200, fees: 1, iban: 'DE00123456780000000000' },
@@ -43,5 +43,27 @@ describe('upload', () => {
   it('reports tool errors', async () => {
     const f = vi.fn(async () => new Response(JSON.stringify({ jsonrpc: '2.0', id: 1, result: { isError: true, content: [{ text: 'Rate limit' }] } })))
     await expect(upload(rows, target, f as unknown as typeof fetch)).rejects.toThrow('Rate limit')
+  })
+})
+
+describe('delta import', () => {
+  const listResult = (structuredContent: unknown, isError = false) =>
+    vi.fn(async () => new Response(JSON.stringify({ jsonrpc: '2.0', id: 0, result: { isError, structuredContent } })))
+
+  it('reads the newest transaction date of the portfolio', async () => {
+    const f = listResult({ count: 1, transactions: [{ date: '2026-03-01' }] })
+    expect(await lastImportDate(target, f as unknown as typeof fetch)).toBe('2026-03-01')
+    const body = JSON.parse(String((f.mock.calls[0] as unknown as [string, RequestInit])[1].body))
+    expect(body.params).toEqual({ name: 'list_transactions', arguments: { portfolio: 'Demo', limit: 1 } })
+  })
+
+  it('treats a missing or empty portfolio as a first import', async () => {
+    expect(await lastImportDate(target, listResult(undefined, true) as unknown as typeof fetch)).toBeNull()
+    expect(await lastImportDate(target, listResult({ count: 0, transactions: [] }) as unknown as typeof fetch)).toBeNull()
+  })
+
+  it('covers the days since the last import plus a week', () => {
+    expect(daysSince('2026-03-01', new Date('2026-03-11T12:00:00Z'))).toBe(18)
+    expect(daysSince('2026-03-11', new Date('2026-03-11T00:00:00Z'))).toBe(8)
   })
 })

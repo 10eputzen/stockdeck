@@ -48,6 +48,11 @@ export type ParseOutput = {
   holdings?: Map<string, number>
 }
 
+export type FetchOptions = {
+  /** Fetch only the last N days (delta import). Undefined = full history. */
+  sinceDays?: number
+}
+
 export type Connector = {
   /** Short id, used on the command line and in the output, e.g. "trade-republic". */
   id: string
@@ -64,7 +69,7 @@ export type Connector = {
    * The user types credentials straight into the bank tool (inherited terminal);
    * a connector never reads, stores or logs them. `tmpDir` is deleted afterwards.
    */
-  fetch(tmpDir: string): Promise<void>
+  fetch(tmpDir: string, opts?: FetchOptions): Promise<void>
   /** Turns the raw files in `tmpDir` into candidates. Pure, no network. */
   parse(tmpDir: string): Promise<ParseOutput>
 }

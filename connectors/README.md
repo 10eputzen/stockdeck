@@ -23,7 +23,7 @@ npm run connect -- tr --upload
 npm run connect -- tr
 ```
 
-Options: `--portfolio "<name>"` (default: the bank's name, created if missing), `--out <dir>` (default `stockdeck-export/`), `--check-holdings` (logs in a second time to compare your computed positions with the bank's).
+Options: `--full` (fetch the whole history instead of only what is new), `--portfolio "<name>"` (default: the bank's name, created if missing), `--out <dir>` (default `stockdeck-export/`), `--check-holdings` (logs in a second time to compare your computed positions with the bank's).
 
 For `--upload`, set two values in the environment or in a `.env.connect` file in the repository root (gitignored):
 
@@ -32,7 +32,7 @@ STOCKDECK_MCP_URL=https://<project-ref>.supabase.co/functions/v1/mcp
 STOCKDECK_API_KEY=sdk_...   # Account page → AI access (MCP)
 ```
 
-Uploads go through the `add_transactions` tool of your MCP endpoint. Running a connector again is safe: transactions already there are skipped.
+Uploads go through the `add_transactions` tool of your MCP endpoint. Running a connector again is safe: transactions already there are skipped. With `--upload`, the connector first asks your instance for the newest transaction in the portfolio and fetches only the days since then plus a week (`--full` fetches the whole history).
 
 Cash bookings (deposits, withdrawals, interest, taxes without a security) are read but not imported, because stockdeck has no cash account yet.
 

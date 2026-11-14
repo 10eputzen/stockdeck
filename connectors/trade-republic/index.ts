@@ -155,11 +155,11 @@ export function tradeRepublic(opts: { checkHoldings?: boolean } = {}): Connector
         ? ['pytr has stored credentials in ~/.pytr/credentials from an earlier run. Delete that file if you do not want them kept.']
         : []
     },
-    async fetch(tmpDir) {
+    async fetch(tmpDir, fetchOpts) {
       const login = ['--v2', '--lang', 'en']
       await run(
         'pytr',
-        ['export_transactions', ...login, '--export-format', 'json', '--no-store-event-database', '--last_days', '0', '--outputdir', tmpDir],
+        ['export_transactions', ...login, '--export-format', 'json', '--no-store-event-database', '--last_days', String(fetchOpts?.sinceDays ?? 0), '--outputdir', tmpDir],
         tmpDir,
       )
       if (opts.checkHoldings) await run('pytr', ['portfolio', '--v2', '-o', join(tmpDir, HOLDINGS_FILE)], tmpDir)

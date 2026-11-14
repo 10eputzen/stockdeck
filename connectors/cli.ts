@@ -1,4 +1,4 @@
-// npm run connect -- <bank> [--upload] [--portfolio "<name>"] [--out <dir>] [--check-holdings]
+// npm run connect -- <bank> [--upload] [--full] [--portfolio "<name>"] [--out <dir>] [--check-holdings]
 //
 // Runs a bank connector on your own computer. You log in inside the bank tool yourself.
 // Only date, type, ISIN, quantity, amount, currency, fees and taxes leave the connector,
@@ -10,7 +10,7 @@ import { createInterface } from 'node:readline/promises'
 import { parseArgs } from 'node:util'
 import { countByType, toCsv } from './core/normalize.ts'
 import { runConnector } from './core/run.ts'
-import { importable, upload } from './core/upload.ts'
+import { daysSince, importable, lastImportDate, upload } from './core/upload.ts'
 import { CONNECTORS, findConnector } from './registry.ts'
 
 const NOTICE = `
@@ -46,6 +46,7 @@ async function main() {
     allowPositionals: true,
     options: {
       upload: { type: 'boolean', default: false },
+      full: { type: 'boolean', default: false },
       portfolio: { type: 'string' },
       out: { type: 'string', default: 'stockdeck-export' },
       'check-holdings': { type: 'boolean', default: false },
@@ -54,7 +55,7 @@ async function main() {
   })
   const ids = CONNECTORS.map((make) => make({}).id).join(', ')
   if (values.help || positionals.length !== 1) {
-    console.log(`Usage: npm run connect -- <bank> [--upload] [--portfolio "<name>"] [--out <dir>] [--check-holdings]\nBanks: ${ids}`)
+    console.log(`Usage: npm run connect -- <bank> [--upload] [--full] [--portfolio "<name>"] [--out <dir>] [--check-holdings]\nBanks: ${ids}`)
     process.exit(values.help ? 0 : 1)
   }
   const connector = findConnector(positionals[0], { checkHoldings: values['check-holdings'] })
@@ -73,7 +74,18 @@ async function main() {
   for (const w of (await connector.preflight?.()) ?? []) console.warn(`Warning: ${w}`)
   console.log(`${connector.name}: ${connector.loginHint}\n`)
 
-  const result = await runConnector(connector)
+  // Delta import: with --upload, fetch only what is new since the last import into this portfolio.
+  // The holdings check needs the full history, so it always fetches everything.
+  let sinceDays: number | undefined
+  if (target && !values.full && !values['check-holdings']) {
+    const last = await lastImportDate(target)
+    if (last) {
+      sinceDays = daysSince(last)
+      console.log(`Last import into "${target.portfolio}": ${last}. Fetching only the last ${sinceDays} days (--full for everything).`)
+    }
+  }
+
+  const result = await runConnector(connector, { sinceDays })
   console.log(`\n${result.rows.length} transactions read:`, countByType(result.rows))
   if (Object.keys(result.skipped).length) console.log('Skipped:', result.skipped)
   if (result.mismatches) {

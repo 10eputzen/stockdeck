@@ -36,6 +36,38 @@ export function assertTarget(t: UploadTarget) {
   if (!t.portfolio.trim()) throw new Error('portfolio name missing')
 }
 
+type ToolResult = { isError?: boolean; content?: { text?: string }[]; structuredContent?: Record<string, unknown> }
+
+async function callTool(target: UploadTarget, fetchImpl: typeof fetch, id: number, name: string, args: Record<string, unknown>): Promise<ToolResult> {
+  const res = await fetchImpl(target.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${target.apiKey}` },
+    body: JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: args } }),
+  })
+  if (!res.ok) throw new Error(`${name} failed: HTTP ${res.status}`)
+  const body = (await res.json()) as { error?: { message?: string }; result?: ToolResult }
+  if (body.error) throw new Error(`${name} failed: ${body.error.message ?? 'unknown error'}`)
+  return body.result ?? {}
+}
+
+/**
+ * Date of the newest transaction in the target portfolio, for the delta import.
+ * Null if the portfolio does not exist yet or is empty.
+ */
+export async function lastImportDate(target: UploadTarget, fetchImpl: typeof fetch = fetch): Promise<string | null> {
+  assertTarget(target)
+  const r = await callTool(target, fetchImpl, 0, 'list_transactions', { portfolio: target.portfolio, limit: 1 })
+  if (r.isError) return null // unknown portfolio: first import
+  const txs = (r.structuredContent?.transactions ?? []) as { date?: unknown }[]
+  const d = String(txs[0]?.date ?? '')
+  return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null
+}
+
+/** Days to fetch so that everything since `last` is covered, plus a safety margin of a week. */
+export function daysSince(last: string, now = new Date()): number {
+  return Math.max(1, Math.ceil((now.getTime() - Date.parse(last)) / 86_400_000)) + 7
+}
+
 /**
  * Sends the rows to the add_transactions tool of the user's own stockdeck instance, in batches.
  * Only the whitelisted, mapped fields are sent. Duplicate ids are skipped by the server.
@@ -45,24 +77,9 @@ export async function upload(rows: NormalizedTx[], target: UploadTarget, fetchIm
   const txs = importable(rows)
   const result: UploadResult = { inserted: 0, duplicates: 0, errors: 0, messages: [] }
   for (let i = 0; i < txs.length; i += BATCH) {
-    const res = await fetchImpl(target.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${target.apiKey}` },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: i / BATCH + 1,
-        method: 'tools/call',
-        params: { name: 'add_transactions', arguments: { portfolio: target.portfolio, transactions: txs.slice(i, i + BATCH) } },
-      }),
-    })
-    if (!res.ok) throw new Error(`upload failed: HTTP ${res.status}`)
-    const body = (await res.json()) as {
-      error?: { message?: string }
-      result?: { isError?: boolean; content?: { text?: string }[]; structuredContent?: { inserted?: number; skipped_duplicates?: number; errors?: { error?: string }[] } }
-    }
-    if (body.error) throw new Error(`upload failed: ${body.error.message ?? 'unknown error'}`)
-    if (body.result?.isError) throw new Error(`upload failed: ${body.result.content?.[0]?.text ?? 'unknown error'}`)
-    const s = body.result?.structuredContent ?? {}
+    const r = await callTool(target, fetchImpl, i / BATCH + 1, 'add_transactions', { portfolio: target.portfolio, transactions: txs.slice(i, i + BATCH) })
+    if (r.isError) throw new Error(`upload failed: ${r.content?.[0]?.text ?? 'unknown error'}`)
+    const s = (r.structuredContent ?? {}) as { inserted?: number; skipped_duplicates?: number; errors?: { error?: string }[] }
     result.inserted += s.inserted ?? 0
     result.duplicates += s.skipped_duplicates ?? 0
     result.errors += s.errors?.length ?? 0

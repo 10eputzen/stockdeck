@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { normalize, quantities } from './normalize.ts'
-import type { Connector, NormalizedTx } from './types.ts'
+import type { Connector, FetchOptions, NormalizedTx } from './types.ts'
 
 export type RunResult = {
   rows: NormalizedTx[]
@@ -23,7 +23,7 @@ function tally(reasons: string[]): Record<string, number> {
  * Runs a connector in a fresh temporary folder and returns only normalized rows.
  * The folder with the bank tool's raw output is always deleted, also on errors.
  */
-export async function runConnector(c: Connector): Promise<RunResult> {
+export async function runConnector(c: Connector, fetchOpts: FetchOptions = {}): Promise<RunResult> {
   const dir = await mkdtemp(join(tmpdir(), 'stockdeck-connect-'))
   // Ctrl+C during the bank login skips `finally`, so remove the raw data here as well
   const abort = () => {
@@ -33,7 +33,7 @@ export async function runConnector(c: Connector): Promise<RunResult> {
   process.once('SIGINT', abort)
   process.once('SIGTERM', abort)
   try {
-    await c.fetch(dir)
+    await c.fetch(dir, fetchOpts)
     const parsed = await c.parse(dir)
     const { rows, rejected } = normalize(c.id, parsed.rows)
     const result: RunResult = {
