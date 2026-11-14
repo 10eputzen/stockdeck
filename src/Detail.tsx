@@ -11,7 +11,7 @@ import {
   type Profile,
   type Quote,
 } from './lib/supabase'
-import { Logo } from './parts'
+import { Logo } from './ui/Logo'
 import { dirOf } from './lib/format'
 import { EarningsText, MetricsView } from './detail/Metrics'
 import { SignalsView } from './detail/Signals'

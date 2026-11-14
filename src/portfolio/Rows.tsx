@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { eur, eurSigned, money, pct } from '../lib/format'
 import type { Position, Totals } from '../lib/supabase'
-import { Logo, Sk } from '../parts'
+import { Logo } from '../ui/Logo'
+import { Sk } from '../ui/Skeleton'
 import { pfDir as dirOf, qty, share } from './format'
 
 export function PfMenu({ onRename, onDelete }: { onRename: () => void; onDelete: () => void }) {

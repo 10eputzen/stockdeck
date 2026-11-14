@@ -22,4 +22,4 @@ Keine CI in GitHub: Gates (Lint, Typen, Tests, Build) laufen lokal vor jedem Pus
 ## UI- und Code-Regeln
 
 - **Keine nativen Browser-Dialoge**: kein `window.confirm`, `alert` oder `prompt`. Bestätigen und Texteingabe laufen über `useDialogs()` aus `src/ui/useDialogs.ts` (`await confirm({ title, message, confirmLabel, danger })`, `await prompt({ title, label, initial })`); der `DialogProvider` sitzt in `main.tsx`. Eigene Formulardialoge nutzen `<dialog>` mit `showModal()` (Fokus-Falle, Escape) und die Klasse `.dialog`.
-- **Höchstens ca. 500 Zeilen pro Datei**: wird eine Komponente oder ein Hook größer, in Teile aufteilen (Verhalten unverändert), bevor es weitergeht. Aktuell größte Datei: `Watchlist.tsx` mit ~450 Zeilen.
+- **Höchstens ca. 500 Zeilen pro Datei**: wird eine Komponente oder ein Hook größer, in Teile aufteilen (Verhalten unverändert), bevor es weitergeht. Aktuell größte Datei: `Watchlist.tsx` mit ~400 Zeilen.

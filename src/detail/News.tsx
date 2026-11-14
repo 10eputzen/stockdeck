@@ -5,7 +5,7 @@ import {
   fetchNews,
   type NewsItem,
 } from '../lib/supabase'
-import { Logo } from '../parts'
+import { Logo } from '../ui/Logo'
 
 /* ---------- News ---------- */
 

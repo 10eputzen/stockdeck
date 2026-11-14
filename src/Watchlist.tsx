@@ -1,42 +1,25 @@
-import { DndContext, DragOverlay } from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import {
-  lazy,
-  Suspense,
-  useCallback,
-  useMemo,
-  useState,
-  type CSSProperties,
-} from "react";
+import { DndContext } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { lazy, Suspense, useCallback, useMemo, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
-import { ImportDialog } from "./ImportDialog";
 import { COL_GAP, gridTemplate, useColumns } from "./lib/columns";
 import type { SharedItem, WatchItem } from "./lib/supabase";
-import { earningsBadge, earningsLong, earningsShort } from "./lib/events";
-import { signalBadge } from "./lib/signals";
-import { time } from "./lib/format";
 import { useLocation, useNarrow, type Route } from "./lib/nav";
+import type { ToastState } from "./Toast";
 import { useWatchlistData } from "./watchlist/useWatchlistData";
 import { useWatchlistDnd } from "./watchlist/useWatchlistDnd";
 import { useListActions } from "./watchlist/useListActions";
+import { useSharedActions } from "./watchlist/useSharedActions";
 import { byPos, containerOf, NONE } from "./watchlist/model";
-import { BottomNav, DeskTabs } from "./watchlist/Nav";
+import { rowData } from "./watchlist/rowData";
+import { DeskTabs } from "./watchlist/Nav";
 import { Container, GroupSection, HeaderRow } from "./watchlist/Groups";
 import { SearchSheet, WatchHeader } from "./watchlist/Header";
 import { AccountPage } from "./watchlist/AccountPage";
-import { useSharedActions } from "./watchlist/useSharedActions";
 import { SharedSection } from "./watchlist/SharedSection";
-import { ShareDialog } from "./watchlist/ShareDialog";
-import {
-  PlainRow,
-  SkeletonRow,
-  StaticRow,
-  StockRow,
-} from "./parts";
-import { Toast, type ToastState } from "./Toast";
+import { PlainRow, SkeletonRow, StaticRow, StockRow } from "./watchlist/Rows";
+import { DragPreview, StatusLine, UngroupedSection } from "./watchlist/ListParts";
+import { WatchDialogs } from "./watchlist/WatchDialogs";
 
 // Chart-Bibliothek erst laden, wenn eine Detailseite geöffnet wird
 const Detail = lazy(() =>
@@ -171,20 +154,12 @@ export function Watchlist({
     "--cols-sm": gridTemplate(cols, true),
     "--col-gap": `${COL_GAP}px`,
   } as CSSProperties;
+  const market = { quotes, profiles, events, signals };
   const rowProps = (i: WatchItem, container: string) => ({
+    ...rowData(i.symbol, i.name, cols, market),
     item: i,
     container,
-    cols,
     style: {},
-    q: quotes[i.symbol],
-    logoUrl: profiles[i.symbol]?.logo_url,
-    name: profiles[i.symbol]?.name ?? i.name,
-    badge: earningsBadge(events[i.symbol]),
-    earn: earningsShort(events[i.symbol]),
-    earnTitle: events[i.symbol]?.next_date ? earningsLong(events[i.symbol]) : undefined,
-    signal: cols.analyst
-      ? signalBadge(signals[i.symbol], quotes[i.symbol])
-      : null,
     onRemove: () => remove(i),
     // Kein Öffnen direkt nach dem Loslassen einer gezogenen Zeile
     onOpen: () => !justDropped() && open(i.symbol),
@@ -199,15 +174,8 @@ export function Watchlist({
     : undefined;
   const existing = (items ?? []).map((i) => i.symbol);
   const sharedRowProps = (i: SharedItem) => ({
+    ...rowData(i.symbol, i.name, cols, market),
     item: i,
-    cols,
-    q: quotes[i.symbol],
-    logoUrl: profiles[i.symbol]?.logo_url,
-    name: profiles[i.symbol]?.name ?? i.name,
-    badge: earningsBadge(events[i.symbol]),
-    earn: earningsShort(events[i.symbol]),
-    earnTitle: events[i.symbol]?.next_date ? earningsLong(events[i.symbol]) : undefined,
-    signal: cols.analyst ? signalBadge(signals[i.symbol], quotes[i.symbol]) : null,
     // Nur fremde Einträge kennzeichnen
     by: i.added_by && i.added_by !== userId ? i.added_by_name : null,
     onRemove: () => shared.remove(i),
@@ -218,33 +186,27 @@ export function Watchlist({
   const page: Route =
     narrow || route === "portfolio" || route === "konto" ? route : "liste";
   const dialogs = (
-    <>
-      <Toast toast={toast} onClose={closeToast} />
-      {shareList && (
-        <ShareDialog
-          list={shareList}
-          isOwner={shareList.owner_id === userId}
-          onInvite={(e) => shared.invite(shareList, e)}
-          onRemoveMember={(e) => shared.removeMember(shareList, e)}
-          onUnshare={() => shared.unshare(shareList)}
-          onLeave={() => shared.leave(shareList, email ?? "")}
-          onClose={() => setShareOpen(null)}
-        />
-      )}
-      {importOpen && (
-        <ImportDialog
-          groups={groups}
-          items={items ?? []}
-          onClose={() => setImportOpen(false)}
-          onDone={(text) => {
-            setImportOpen(false);
-            setToast({ text });
-            loadAll();
-          }}
-        />
-      )}
-      {narrow && !loc.symbol && <BottomNav route={route} go={go} />}
-    </>
+    <WatchDialogs
+      toast={toast}
+      onCloseToast={closeToast}
+      shareList={shareList}
+      userId={userId}
+      email={email}
+      shared={shared}
+      onCloseShare={() => setShareOpen(null)}
+      importOpen={importOpen}
+      groups={groups}
+      items={items ?? []}
+      onCloseImport={() => setImportOpen(false)}
+      onImported={(text) => {
+        setImportOpen(false);
+        setToast({ text });
+        loadAll();
+      }}
+      showNav={narrow && !loc.symbol}
+      route={route}
+      go={go}
+    />
   );
   const deskTabs = !narrow && <DeskTabs route={page} go={go} />;
 
@@ -388,19 +350,9 @@ export function Watchlist({
             {(sortedGroups.length === 0 ||
               lists[NONE].length > 0 ||
               activeItem) && (
-              <section className="group">
-                {sortedGroups.length > 0 && (
-                  <div className="grouphead">
-                    <span className="groupname static">{t("watchlist.ungrouped")}</span>
-                    <span className="muted small-count">
-                      {lists[NONE].length}
-                    </span>
-                  </div>
-                )}
-                <Container id={NONE} list={lists[NONE]}>
-                  {(i) => <StockRow key={i.id} {...rowProps(i, NONE)} />}
-                </Container>
-              </section>
+              <UngroupedSection list={lists[NONE]} showHead={sortedGroups.length > 0}>
+                {(i) => <StockRow key={i.id} {...rowProps(i, NONE)} />}
+              </UngroupedSection>
             )}
             {sharedLists.map((l) => (
               <SharedSection
@@ -424,17 +376,11 @@ export function Watchlist({
                   : t("watchlist.emptyDesktop")}
               </p>
             )}
-            <DragOverlay dropAnimation={null}>
-              {activeItem ? (
-                <div className="overlay" style={gridVars}>
-                  <PlainRow {...rowProps(activeItem, "")} />
-                </div>
-              ) : activeGroup ? (
-                <div className="overlay grouphead">
-                  <span className="groupname static">{activeGroup.name}</span>
-                </div>
-              ) : null}
-            </DragOverlay>
+            <DragPreview
+              row={activeItem && <PlainRow {...rowProps(activeItem, "")} />}
+              group={activeGroup}
+              gridVars={gridVars}
+            />
           </DndContext>
         )}
       </div>
@@ -443,15 +389,7 @@ export function Watchlist({
         <SearchSheet onAdd={add} existing={existing} onClose={back} />
       )}
 
-      {/* Status unter der Liste, damit Meldungen nichts verschieben */}
-      <p className={`small ${error ? "error" : "muted"}`}>
-        {error ??
-          (refreshing
-            ? t("watchlist.refreshing")
-            : updated
-            ? t("watchlist.updatedAt", { time: time.format(updated) })
-            : " ")}
-      </p>
+      <StatusLine error={error} refreshing={refreshing} updated={updated} />
       {dialogs}
     </section>
   );
