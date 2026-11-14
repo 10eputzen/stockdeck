@@ -7,6 +7,7 @@ import { resolveIsins, supabase, type Portfolio } from './lib/supabase'
 import { TX_LABEL } from './lib/txLabels'
 
 const MAX_ROWS = 5000
+const FORMAT_LABEL = { parqet: 'portfolio.csvFormatParqet', einfach: 'portfolio.csvFormatSimple', connector: 'portfolio.csvFormatConnector' } as const
 
 /** CSV-Import mit Vorschau: Parqet-Export oder einfaches Format, Dubletten werden erkannt. */
 export function CsvImport({
@@ -114,6 +115,7 @@ export function CsvImport({
       <p className="muted small">
         {t('portfolio.csvHint')}
       </p>
+      <p className="muted small">{t('portfolio.csvConnectorHint')}</p>
       <pre className="csvhint">{t('portfolio.csvExample')}</pre>
       <input type="file" accept=".csv,.txt,text/csv,text/plain" aria-label={t('portfolio.chooseFile')} onChange={(e) => e.target.files?.[0] && readFile(e.target.files[0])} />
       <textarea value={text} onChange={(e) => setText(e.target.value)} rows={5} placeholder={t('portfolio.csvPlaceholder')} aria-label={t('portfolio.csvContentAria')} />
@@ -139,7 +141,7 @@ export function CsvImport({
       {parsed && (
         <div className="preview" aria-live="polite">
           <p className="small">
-            {t('portfolio.csvDetected')}: <strong>{parsed.format === 'parqet' ? t('portfolio.csvFormatParqet') : t('portfolio.csvFormatSimple')}</strong> · {t('portfolio.countNew', { count: fresh.length })}
+            {t('portfolio.csvDetected')}: <strong>{t(FORMAT_LABEL[parsed.format])}</strong> · {t('portfolio.countNew', { count: fresh.length })}
             {dupes > 0 && ` · ${t('portfolio.countExisting', { count: dupes })}`}
             {parsed.skipped.length > 0 && ` · ${t('portfolio.countSkipped', { count: parsed.skipped.length })}`}
           </p>

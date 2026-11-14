@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- Local bank connectors (#10): `npm run connect -- tr --upload` reads your own Trade Republic transactions via pytr on your computer and uploads them into your instance; without `--upload` it writes a file the CSV import recognizes. Only date, type, ISIN, quantity, amount, currency, fees and taxes are kept. Personal use only, see `connectors/README.md`.
+
 ## [1.1.0] – 2026-11-14
 
 ### Added

@@ -31,3 +31,10 @@ supabase/.branches
 .env.*
 !.env.example
 setup.env
+
+# Bank connectors: local exports and upload settings never go into the repo
+stockdeck-export/
+.env.connect
+account_transactions.*
+all_events.json
+.pytr/

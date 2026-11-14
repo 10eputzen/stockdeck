@@ -19,6 +19,7 @@ The UI is available in English and German (browser language by default, switchab
 - Watchlist with groups, drag & drop, configurable and resizable columns
 - Detail view per stock: chart, key metrics, news, analyst consensus, price target, insider trades, earnings, short interest, technicals
 - Portfolios with transactions, CSV import (Parqet export or a simple format), valuation in EUR
+- Local bank connectors (Trade Republic first) that upload your own transactions into your instance, personal use only
 - Web push alerts: price above/below, daily move, take-profit and stop rules
 - Shared watchlists: invite people by email, everyone can edit
 - MCP server so Claude and other assistants can read and edit the watchlist and portfolio
@@ -87,6 +88,7 @@ Example in Claude: *“Which stocks in my Tech group dropped today, and what do 
 - `supabase/migrations/` – schema, policies, auth hook, cron job.
 - `supabase/functions/market/` – quotes (60 s cache), search, charts, news, metrics, signals; the Finnhub key stays server-side.
 - `supabase/functions/alerts/` – evaluates alert rules (via pg_cron every 15 minutes) and sends web push.
+- `connectors/` – local command-line bank connectors, see [Bank connectors](#bank-connectors).
 - `supabase/functions/mcp/` – MCP server (Streamable HTTP, stateless) for watchlist and portfolio. Auth via OAuth (Supabase Auth as OAuth server, consent page at `/oauth/consent`) or an API key header.
 - Instance values (Supabase project, app URL, VAPID key, deploy target) are not in the repo: the frontend and the deploy script read them from `.env` (template `.env.example`), the functions from their secrets (template `supabase/functions/.env.example`).
 
@@ -167,6 +169,12 @@ CI runs lint, type check and tests on pull requests (`.github/workflows/ci.yml`)
 - Endpoint: `https://<project-ref>.supabase.co/functions/v1/mcp`
 - claude.ai connector: add the URL; sign-in runs via OAuth through the app.
 - Claude Code or other clients: header `Authorization: Bearer <key>`. Create keys on the Account page under "AI access (MCP)": the key is shown once, only its SHA-256 hash is stored. Revoke keys there as well.
+
+## Bank connectors
+
+`npm run connect -- tr --upload` reads your Trade Republic transactions on your own computer and uploads them into your instance. You log in inside the bank tool yourself, and credentials are never stored. Only date, type, ISIN, quantity, amount, currency, fees and taxes are kept. IBANs, names, counterparties and payment references are dropped, and nothing goes to third parties.
+
+**Personal use only:** connectors may use unofficial interfaces that no bank endorses. Use them only for your own accounts and at your own risk. Details, options and how to add a bank: [connectors/README.md](connectors/README.md).
 
 ## Contributing
 
