@@ -10,6 +10,13 @@ All notable changes to this project are documented here. The format follows [Kee
 - `npm run setup -- --self-hosted <folder>`: the same setup for the official self-hosted Supabase stack (Docker), tested against the official stack.
 - Navigation animations: a glowing line glides to the active tab (bottom bar on phones, underline on desktop) and pages slide in from the direction of the tab. Respects reduced motion.
 
+### Changed
+
+- Faster, leaner quote updates: the watchlist refreshes quotes every 30 s while markets are open (US pre-market to after-hours, European session included) and every 15 min otherwise, and pauses while the tab is hidden. Polled quotes are served from the server cache immediately and refreshed in the background.
+- Quotes for known symbols load in parallel with the watchlist instead of after it, which shortens startup.
+- The browser remembers the CORS preflight of the market function for 2 h instead of repeating it before almost every call.
+- Switching back to the portfolio within 30 s shows the cached state instead of reloading transactions, quotes and logos.
+
 ### Fixed
 
 - A toast no longer disappears when switching between Watchlist, Portfolio and Account.

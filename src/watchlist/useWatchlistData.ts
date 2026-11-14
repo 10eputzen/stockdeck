@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { readCache, writeCache } from "../lib/cache";
+import { quoteInterval } from "../lib/marketHours";
 import {
   fetchEvents,
   fetchProfiles,
@@ -17,7 +18,6 @@ import {
   type WatchItem,
 } from "../lib/supabase";
 
-const REFRESH_MS = 60_000;
 /** Beim Zurückkehren in den Tab neu laden (geteilte Listen ändern andere), höchstens alle 30 s */
 const REVISIT_MS = 30_000;
 
@@ -39,7 +39,8 @@ type Snapshot = {
 
 /**
  * Daten der Watchlist: zeigt sofort den letzten Stand aus dem Browser-Cache, lädt im Hintergrund
- * Liste, Logos, Termine, Signale und Kurse nach und aktualisiert die Kurse jede Minute.
+ * Liste, Logos, Termine, Signale und Kurse nach. Kurse alle 30 s im Handel, sonst alle 15 min,
+ * und nur bei sichtbarem Tab.
  */
 export function useWatchlistData(userId: string) {
   // Letzten Stand sofort zeigen, frische Daten kommen im Hintergrund
@@ -70,6 +71,8 @@ export function useWatchlistData(userId: string) {
   );
   const [error, setError] = useState<string | null>(null);
   const lastLoad = useRef(0);
+  const knownSymbols = useRef<string[]>([]);
+  knownSymbols.current = uniqueSymbols(items ?? [], sharedItems);
   // Läuft gerade eine Aktualisierung? Dann zeigt die Oberfläche den letzten Stand dezent als „alt“ an.
   const [pending, setPending] = useState(0);
   const refreshing = pending > 0;
@@ -94,11 +97,11 @@ export function useWatchlistData(userId: string) {
     } satisfies Snapshot);
   }, [userId, allowed, items, groups, admin, sharedLists, sharedItems, quotes, profiles, events, signals, updated]);
 
-  const loadQuotes = useCallback(async (symbols: string[]) => {
+  const loadQuotes = useCallback(async (symbols: string[], swr = false) => {
     if (symbols.length === 0) return;
     setPending((n) => n + 1);
     try {
-      const qs = await fetchQuotes(symbols);
+      const qs = await fetchQuotes(symbols, { swr });
       setQuotes((old) => ({
         ...old,
         ...Object.fromEntries(qs.map((q) => [q.symbol, q])),
@@ -114,6 +117,9 @@ export function useWatchlistData(userId: string) {
 
   const loadAllInner = useCallback(async () => {
     lastLoad.current = Date.now();
+    // Kurse der schon bekannten Symbole gleich mitholen statt auf die Liste zu warten
+    const known = knownSymbols.current;
+    const early = loadQuotes(known);
     const [it, gr, sl, si] = await Promise.all([
       supabase
         .from("watchlist_items")
@@ -133,6 +139,7 @@ export function useWatchlistData(userId: string) {
         .order("position"),
     ]);
     if (it.error || gr.error) {
+      await early;
       setError(t("watchlist.errLoadWatchlist"));
       setItems((old) => old ?? []);
       return;
@@ -146,6 +153,7 @@ export function useWatchlistData(userId: string) {
       setSharedItems((old) => (same(old, si.data) ? old : si.data));
     }
     const symbols = uniqueSymbols(it.data, si.data ?? []);
+    const added = symbols.filter((s) => !known.includes(s));
     // Logos/Namen und Kurse parallel; Logos sind Zierde, Fehler dort stören nicht
     await Promise.all([
       fetchProfiles(symbols)
@@ -174,7 +182,8 @@ export function useWatchlistData(userId: string) {
           })),
         )
         .catch(() => {}),
-      loadQuotes(symbols),
+      early,
+      loadQuotes(added),
     ]);
   }, [loadQuotes]);
 
@@ -208,10 +217,16 @@ export function useWatchlistData(userId: string) {
   }, [loadAll]);
 
   const symbolKey = uniqueSymbols(items ?? [], sharedItems).join(",");
+  // Polling: im verborgenen Tab aussetzen (beim Zurückkehren lädt der Sichtbarkeits-Handler nach)
   useEffect(() => {
     if (!allowed || !symbolKey) return;
-    const id = setInterval(() => loadQuotes(symbolKey.split(",")), REFRESH_MS);
-    return () => clearInterval(id);
+    let id: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      if (document.visibilityState === "visible") loadQuotes(symbolKey.split(","), true);
+      id = setTimeout(tick, quoteInterval());
+    };
+    id = setTimeout(tick, quoteInterval());
+    return () => clearTimeout(id);
   }, [allowed, symbolKey, loadQuotes]);
 
   // Zurück im Tab: Änderungen der anderen an geteilten Listen holen

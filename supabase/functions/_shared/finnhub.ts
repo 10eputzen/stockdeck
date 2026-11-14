@@ -194,8 +194,15 @@ async function mirrorLogo(admin: SupabaseClient, symbol: string, url: string): P
   return undefined;
 }
 
-/** Kurse beliebig vieler Symbole, intern in Blöcken zu MAX_SYMBOLS; `admin` = Service-Role (Cache-Schreibzugriff). */
-export const getQuotes = (admin: SupabaseClient, input: unknown[]) => inChunks(input, (part) => quotesChunk(admin, part));
+/**
+ * Kurse beliebig vieler Symbole, intern in Blöcken zu MAX_SYMBOLS; `admin` = Service-Role (Cache-Schreibzugriff).
+ * `swr`: Kurse bis SWR_SECONDS Alter sofort aus dem Cache liefern und im Hintergrund erneuern
+ * (für das Polling der App, das so nicht auf Finnhub warten muss). Ohne `swr` immer frisch (Alarme, MCP).
+ */
+export const getQuotes = (admin: SupabaseClient, input: unknown[], opts: { swr?: boolean } = {}) =>
+  inChunks(input, (part) => quotesChunk(admin, part, opts.swr === true));
+
+const SWR_SECONDS = 15 * 60;
 
 /** Gültige, eindeutige Symbole in Blöcken zu MAX_SYMBOLS nacheinander abarbeiten (schont das Finnhub-Kontingent). */
 async function inChunks<T>(input: unknown[], fn: (part: string[]) => Promise<T[]>): Promise<T[]> {
@@ -205,65 +212,92 @@ async function inChunks<T>(input: unknown[], fn: (part: string[]) => Promise<T[]
   return out;
 }
 
-async function quotesChunk(admin: SupabaseClient, symbols: string[]): Promise<Quote[]> {
+/** Einen Kurs frisch holen: US über Finnhub (plus Vor-/Nachbörse von Yahoo), sonst Yahoo. */
+async function fetchQuote(symbol: string): Promise<Quote | null> {
+  try {
+    if (!isUsSymbol(symbol)) {
+      const y = await yahooQuote(symbol);
+      if (!y) return null;
+      return {
+        ext_session: null,
+        ext_price: null,
+        ext_change_pct: null,
+        ext_time: null,
+        symbol,
+        price: y.price,
+        change: Math.round((y.price - y.prev_close) * 10000) / 10000,
+        change_pct: y.prev_close ? Math.round(((y.price - y.prev_close) / y.prev_close) * 10000) / 100 : 0,
+        prev_close: y.prev_close,
+        day_high: y.day_high,
+        day_low: y.day_low,
+        quote_time: y.quote_time,
+        currency: y.currency,
+        fetched_at: new Date().toISOString(),
+      };
+    }
+    const [q, ext] = await Promise.all([finnhub("/quote", { symbol }), extendedHours(symbol)]);
+    // Finnhub liefert für unbekannte Symbole lauter Nullen
+    if (!q || (q.c === 0 && q.pc === 0)) return null;
+    return {
+      ...ext,
+      symbol,
+      price: q.c,
+      change: q.d,
+      change_pct: q.dp,
+      prev_close: q.pc,
+      day_high: q.h,
+      day_low: q.l,
+      quote_time: q.t ? new Date(q.t * 1000).toISOString() : null,
+      currency: "USD",
+      fetched_at: new Date().toISOString(),
+    };
+  } catch (e) {
+    console.error(symbol, e);
+    return null;
+  }
+}
+
+/** Kurse frisch holen und in `quotes` ablegen. */
+async function refreshQuotes(admin: SupabaseClient, symbols: string[]): Promise<Quote[]> {
+  const rows = (await Promise.all(symbols.map(fetchQuote))).filter((r): r is Quote => r !== null);
+  if (rows.length) await admin.from("quotes").upsert(rows);
+  return rows;
+}
+
+/** Symbole, deren Erneuerung in dieser Instanz gerade im Hintergrund läuft (keine doppelten Abrufe). */
+const refreshing = new Set<string>();
+
+declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined;
+
+/** Erneuerung nach der Antwort weiterlaufen lassen (Supabase Edge Runtime), sonst im selben Aufruf abwarten. */
+function inBackground(admin: SupabaseClient, symbols: string[]): void {
+  const todo = symbols.filter((s) => !refreshing.has(s));
+  if (todo.length === 0) return;
+  for (const s of todo) refreshing.add(s);
+  const job = refreshQuotes(admin, todo)
+    .catch((e) => console.error("quotes refresh", e))
+    .finally(() => todo.forEach((s) => refreshing.delete(s)));
+  if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(job);
+}
+
+async function quotesChunk(admin: SupabaseClient, symbols: string[], swr: boolean): Promise<Quote[]> {
   if (symbols.length === 0) return [];
 
   const { data: cached } = await admin.from("quotes").select("*").in("symbol", symbols);
+  const age = (q: Quote) => Date.now() - new Date(q.fetched_at).getTime();
   const fresh = new Map<string, Quote>(
-    (cached ?? [])
-      .filter((q) => Date.now() - new Date(q.fetched_at).getTime() < CACHE_SECONDS * 1000)
-      .map((q) => [q.symbol, q]),
+    (cached ?? []).filter((q) => age(q) < CACHE_SECONDS * 1000).map((q) => [q.symbol, q]),
   );
 
+  if (swr) {
+    // Nicht zu alte Kurse sofort liefern, im Hintergrund erneuern; nur ganz alte oder fehlende abwarten
+    const usable = (cached ?? []).filter((q) => !fresh.has(q.symbol) && age(q) < SWR_SECONDS * 1000);
+    inBackground(admin, usable.map((q) => q.symbol));
+    for (const q of usable) fresh.set(q.symbol, q);
+  }
+
   const stale = symbols.filter((s) => !fresh.has(s));
-  const fetched = await Promise.all(
-    stale.map(async (symbol): Promise<Quote | null> => {
-      try {
-        if (!isUsSymbol(symbol)) {
-          const y = await yahooQuote(symbol);
-          if (!y) return null;
-          return {
-            ext_session: null,
-            ext_price: null,
-            ext_change_pct: null,
-            ext_time: null,
-            symbol,
-            price: y.price,
-            change: Math.round((y.price - y.prev_close) * 10000) / 10000,
-            change_pct: y.prev_close ? Math.round(((y.price - y.prev_close) / y.prev_close) * 10000) / 100 : 0,
-            prev_close: y.prev_close,
-            day_high: y.day_high,
-            day_low: y.day_low,
-            quote_time: y.quote_time,
-            currency: y.currency,
-            fetched_at: new Date().toISOString(),
-          };
-        }
-        const [q, ext] = await Promise.all([finnhub("/quote", { symbol }), extendedHours(symbol)]);
-        // Finnhub liefert für unbekannte Symbole lauter Nullen
-        if (!q || (q.c === 0 && q.pc === 0)) return null;
-        return {
-          ...ext,
-          symbol,
-          price: q.c,
-          change: q.d,
-          change_pct: q.dp,
-          prev_close: q.pc,
-          day_high: q.h,
-          day_low: q.l,
-          quote_time: q.t ? new Date(q.t * 1000).toISOString() : null,
-          currency: "USD",
-          fetched_at: new Date().toISOString(),
-        };
-      } catch (e) {
-        console.error(symbol, e);
-        return null;
-      }
-    }),
-  );
-  const rows = fetched.filter((r): r is Quote => r !== null);
-  if (rows.length) await admin.from("quotes").upsert(rows);
-  for (const r of rows) fresh.set(r.symbol, r);
+  for (const r of await refreshQuotes(admin, stale)) fresh.set(r.symbol, r);
 
   // Fehlt ein frischer Kurs, lieber den alten zeigen als nichts
   return symbols

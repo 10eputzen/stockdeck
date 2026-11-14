@@ -1,4 +1,4 @@
-// Stockdeck market function: Kurse (mit 60-s-Cache) und Symbolsuche über Finnhub.
+// Stockdeck market function: Kurse (mit 60-s-Cache, auf Wunsch `swr` sofort aus dem Cache) und Symbolsuche über Finnhub.
 // POST { action: "quotes" | "profiles", symbols: string[] } | { action: "search", q: string }
 //    | { action: "chart", symbol, range, before? } | { action: "news", symbol, offset? }
 //    | { action: "events" | "signals", symbols: string[] } | { action: "metrics", symbol }
@@ -20,6 +20,8 @@ function corsFor(req: Request): Record<string, string> {
     ...(isAllowedOrigin(origin) ? { "Access-Control-Allow-Origin": origin } : {}),
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
+    // Vorabfrage (Preflight) 2 h merken statt vor jedem Aufruf zu wiederholen (Chrome deckelt bei 2 h)
+    "Access-Control-Max-Age": "7200",
     Vary: "Origin",
   };
 }
@@ -38,7 +40,7 @@ Deno.serve(async (req) => {
   const { data: allowed, error: authError } = await userClient.rpc("is_allowed");
   if (authError || allowed !== true) return json({ error: "forbidden" }, 403);
 
-  let body: { action?: string; symbols?: unknown; q?: unknown; symbol?: unknown; range?: unknown; before?: unknown; offset?: unknown; isins?: unknown };
+  let body: { action?: string; symbols?: unknown; swr?: unknown; q?: unknown; symbol?: unknown; range?: unknown; before?: unknown; offset?: unknown; isins?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -54,7 +56,7 @@ Deno.serve(async (req) => {
       const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
       const symbols = Array.isArray(body.symbols) ? body.symbols.slice(0, MAX_SYMBOLS) : [];
       return body.action === "quotes"
-        ? json({ quotes: await getQuotes(admin, symbols) })
+        ? json({ quotes: await getQuotes(admin, symbols, { swr: body.swr === true }) })
         : json({ profiles: await getProfiles(admin, symbols) });
     }
     if (body.action === "events") {

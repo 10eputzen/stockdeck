@@ -62,8 +62,9 @@ async function market<T>(body: object): Promise<T> {
   return data as T
 }
 
-export const fetchQuotes = (symbols: string[]) =>
-  market<{ quotes: Quote[] }>({ action: 'quotes', symbols }).then((d) => d.quotes)
+/** `swr`: Server liefert bis 15 min alte Kurse sofort und erneuert im Hintergrund (für das Polling). */
+export const fetchQuotes = (symbols: string[], opts: { swr?: boolean } = {}) =>
+  market<{ quotes: Quote[] }>({ action: 'quotes', symbols, ...(opts.swr ? { swr: true } : {}) }).then((d) => d.quotes)
 
 export const searchSymbols = (q: string) =>
   market<{ results: SearchResult[] }>({ action: 'search', q }).then((d) => d.results)

@@ -29,6 +29,10 @@ type Data = {
 }
 
 
+/** Letztes vollständiges Laden je Nutzer: ein Tab-Wechsel innerhalb von 30 s lädt nicht alles erneut. */
+const lastLoaded = new Map<string, number>()
+const RELOAD_MS = 30_000
+
 /** Depots, Transaktionen, Kurse und EZB-Kurse laden; der letzte Stand liegt sofort aus dem Cache vor. */
 function usePortfolio(userId: string) {
   const { t } = useTranslation()
@@ -55,6 +59,7 @@ function usePortfolio(userId: string) {
       Promise.all(chunks.map((c) => fetchProfiles(c).catch(() => []))).then((r) => r.flat()),
     ])
     setError(null)
+    lastLoaded.set(key, Date.now())
     setData((old) => ({
       portfolios: pf.data,
       txs,
@@ -73,8 +78,10 @@ function usePortfolio(userId: string) {
     }
   }, [loadInner])
   useEffect(() => {
+    // Gerade erst geladen (Hin- und Herwechseln der Tabs): Stand aus dem Cache reicht
+    if (readCache<Data>(key) && Date.now() - (lastLoaded.get(key) ?? 0) < RELOAD_MS) return
     load()
-  }, [load])
+  }, [key, load])
   useEffect(() => {
     if (data) writeCache(key, data)
   }, [key, data])
