@@ -68,8 +68,11 @@ export const fetchQuotes = (symbols: string[]) =>
 export const searchSymbols = (q: string) =>
   market<{ results: SearchResult[] }>({ action: 'search', q }).then((d) => d.results)
 
+// Eigene Logo-Kopien kommen als Pfad unter der Supabase-URL (siehe Edge Function `market`)
 export const fetchProfiles = (symbols: string[]) =>
-  market<{ profiles: Profile[] }>({ action: 'profiles', symbols }).then((d) => d.profiles)
+  market<{ profiles: Profile[] }>({ action: 'profiles', symbols }).then((d) =>
+    d.profiles.map((p) => (p.logo_url?.startsWith('/') ? { ...p, logo_url: url + p.logo_url } : p)),
+  )
 
 export type ChartRange = '1d' | '5d' | '1mo' | '6mo' | 'ytd' | '1y' | '5y' | 'max'
 export type Bar = { t: number; o: number; h: number; l: number; c: number; v: number }

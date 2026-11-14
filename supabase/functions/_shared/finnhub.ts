@@ -140,10 +140,58 @@ async function profilesChunk(admin: SupabaseClient, symbols: string[]): Promise<
       }
     }),
   );
-  const rows = fetched.filter((p): p is Profile => p !== null);
+  // Fremde Logo-Adressen (neu oder noch aus der Zeit vor der Kopie) einmal in den eigenen Speicher übernehmen
+  const candidates = [...fetched.filter((p): p is Profile => p !== null), ...result.values()];
+  const rows: Profile[] = [];
+  await Promise.all(
+    candidates.map(async (p) => {
+      const isNew = !result.has(p.symbol);
+      if (p.logo_url && /^https?:/.test(p.logo_url)) {
+        const own = await mirrorLogo(admin, p.symbol, p.logo_url);
+        // Vorübergehender Fehler: kein Logo ausliefern, beim nächsten Aufruf erneut versuchen
+        if (own === undefined) {
+          result.set(p.symbol, { ...p, logo_url: null });
+          return;
+        }
+        p = { ...p, logo_url: own };
+        rows.push(p);
+      } else if (isNew) rows.push(p);
+      result.set(p.symbol, p);
+    }),
+  );
   if (rows.length) await admin.from("symbol_profiles").upsert(rows);
-  for (const r of rows) result.set(r.symbol, r);
   return symbols.map((s) => result.get(s)).filter((p): p is Profile => Boolean(p));
+}
+
+const LOGO_BUCKET = "logos";
+const LOGO_TYPES = /^image\/(png|jpeg|svg\+xml|webp)$/;
+
+/**
+ * Logo laden und im öffentlichen Bucket ablegen (bis zu drei Versuche, Finnhubs Server wackelt).
+ * Liefert den Pfad relativ zur Supabase-URL, damit er auch hinter einem Proxy (Self-Hosting) stimmt;
+ * `null`, wenn es dauerhaft kein Logo gibt, `undefined` bei vorübergehenden Fehlern.
+ */
+async function mirrorLogo(admin: SupabaseClient, symbol: string, url: string): Promise<string | null | undefined> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      const type = (res.headers.get("content-type") ?? "").split(";")[0].trim();
+      if (!res.ok || !LOGO_TYPES.test(type)) {
+        await res.body?.cancel();
+        if (res.status === 404 || (res.ok && !LOGO_TYPES.test(type))) return null;
+        continue;
+      }
+      const file = `${symbol}.${type === "image/svg+xml" ? "svg" : type.split("/")[1]}`;
+      const { error } = await admin.storage
+        .from(LOGO_BUCKET)
+        .upload(file, await res.arrayBuffer(), { contentType: type, upsert: true, cacheControl: "2592000" });
+      if (error) throw error;
+      return `/storage/v1/object/public/${LOGO_BUCKET}/${encodeURIComponent(file)}`;
+    } catch (e) {
+      console.error("logo", symbol, e);
+    }
+  }
+  return undefined;
 }
 
 /** Kurse beliebig vieler Symbole, intern in Blöcken zu MAX_SYMBOLS; `admin` = Service-Role (Cache-Schreibzugriff). */

@@ -13,6 +13,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Fixed
 
 - A toast no longer disappears when switching between Watchlist, Portfolio and Account.
+- Company logos are copied once into a public Supabase Storage bucket and served from there with a 30-day cache. Finnhub's logo server sends no cache headers and sometimes fails, which left errors in the browser console.
 
 ## [1.0.0] – 2026-11-13
 
