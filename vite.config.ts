@@ -6,7 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 /** Supabase-URL für die CSP in public/_headers, aus VITE_SUPABASE_URL (.env oder Umgebung). */
 let supabaseUrl = ''
 const fillHeaders = (text: string) =>
-  text.replaceAll('%SUPABASE_URL%', supabaseUrl).replaceAll('%SUPABASE_WSS%', supabaseUrl.replace('https://', 'wss://'))
+  text.replaceAll('%SUPABASE_URL%', supabaseUrl).replaceAll('%SUPABASE_WSS%', supabaseUrl.replace(/^http/, 'ws'))
 
 /** Header aus public/_headers (Block "/*"), damit CSP-Fehler schon lokal auffallen. */
 function siteHeaders(dev: boolean): Record<string, string> {

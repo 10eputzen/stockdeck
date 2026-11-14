@@ -92,7 +92,7 @@ Example in Claude: *“Which stocks in my Tech group dropped today, and what do 
 
 ## Run your own instance
 
-You need Node 22+, a free [Supabase](https://supabase.com) project, a [Finnhub](https://finnhub.io) API key (free tier is fine for trying it out) and a Google OAuth client for sign-in.
+You need Node 22+, a free [Supabase](https://supabase.com) project (or [self-hosted Supabase](#self-hosted-supabase-docker)), a [Finnhub](https://finnhub.io) API key (free tier is fine for trying it out) and a Google OAuth client for sign-in.
 
 **1. Collect the values**
 
@@ -120,6 +120,21 @@ npm run dev
 ```
 
 Open http://localhost:5173 and sign in with Google. Invite others through shared lists.
+
+### Self-hosted Supabase (Docker)
+
+Stockdeck also runs on the [official self-hosted Supabase](https://supabase.com/docs/guides/self-hosting/docker) stack, without a supabase.com account. You need Docker in addition to the values above (no Supabase token).
+
+1. Set up Supabase with Docker as described in that guide and start it with `docker compose up -d`.
+2. Run the setup against its `docker` folder:
+   ```bash
+   npm install
+   npm run setup -- --self-hosted /path/to/supabase/docker
+   ```
+   The script applies the migrations through `docker compose exec`, copies the Edge Functions into `volumes/functions`, writes the stockdeck settings (Google sign-in, sign-up hook, OAuth server, function secrets) into that folder's `.env` with a small compose override, and restarts the stack.
+3. Add the redirect URI the script prints (`<API_EXTERNAL_URL>/callback`) to the Google OAuth client, then `npm run dev`.
+
+After updating stockdeck, run the same command again to apply new migrations and functions. For a public deployment, put the stack behind HTTPS as the Supabase guide describes and set `SUPABASE_PUBLIC_URL`, `API_EXTERNAL_URL` and `SITE_URL` accordingly before running the setup.
 
 <details>
 <summary>Manual setup (what the script does)</summary>

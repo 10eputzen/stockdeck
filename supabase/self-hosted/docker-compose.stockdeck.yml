@@ -1,0 +1,26 @@
+# Stockdeck additions for the official self-hosted Supabase setup (supabase/supabase, folder docker/).
+# `npm run setup -- --self-hosted <that folder>` copies this file there, adds it to COMPOSE_FILE in its .env
+# and fills the variables below into the same .env.
+services:
+  auth:
+    environment:
+      GOTRUE_EXTERNAL_GOOGLE_ENABLED: "true"
+      GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOTRUE_EXTERNAL_GOOGLE_SECRET: ${GOOGLE_SECRET}
+      GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${API_EXTERNAL_URL}/callback
+      # Invite-only: accounts only for addresses in public.allowed_emails
+      GOTRUE_HOOK_BEFORE_USER_CREATED_ENABLED: "true"
+      GOTRUE_HOOK_BEFORE_USER_CREATED_URI: pg-functions://postgres/public/hook_before_user_created
+      # OAuth 2.1 server for the MCP connector; the app hosts the consent page
+      GOTRUE_OAUTH_SERVER_ENABLED: "true"
+      GOTRUE_OAUTH_SERVER_ALLOW_DYNAMIC_REGISTRATION: "true"
+      GOTRUE_OAUTH_SERVER_AUTHORIZATION_PATH: /oauth/consent
+
+  functions:
+    environment:
+      SITE_URL: ${SITE_URL}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT}
+      ALERTS_CRON_SECRET: ${ALERTS_CRON_SECRET}
