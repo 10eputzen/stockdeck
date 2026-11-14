@@ -1,0 +1,29 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Security problems please report privately (Security → Report a vulnerability), not here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Open …\n2. Click …"
+  - type: input
+    id: env
+    attributes:
+      label: Browser and device
+      placeholder: e.g. Chrome 131 on Android, installed as app
+  - type: textarea
+    id: console
+    attributes:
+      label: Console output or screenshot
+      description: Remove personal data such as emails, portfolio values and your project URL.

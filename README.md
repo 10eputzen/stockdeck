@@ -153,6 +153,10 @@ CI runs lint, type check and tests on pull requests (`.github/workflows/ci.yml`)
 - claude.ai connector: add the URL; sign-in runs via OAuth through the app.
 - Claude Code or other clients: header `Authorization: Bearer <key>`. To create a key, generate a random string and store only its SHA-256 hash (hex) with `user_id` and `label` in `api_keys`; revoke via `revoked_at`.
 
+## Contributing
+
+Issues and pull requests are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). Security problems please report privately, see [SECURITY.md](SECURITY.md).
+
 ## License and data
 
 - Code: MIT, see `LICENSE`.
