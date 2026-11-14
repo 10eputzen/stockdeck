@@ -166,7 +166,7 @@ CI runs lint, type check and tests on pull requests (`.github/workflows/ci.yml`)
 
 - Endpoint: `https://<project-ref>.supabase.co/functions/v1/mcp`
 - claude.ai connector: add the URL; sign-in runs via OAuth through the app.
-- Claude Code or other clients: header `Authorization: Bearer <key>`. To create a key, generate a random string and store only its SHA-256 hash (hex) with `user_id` and `label` in `api_keys`; revoke via `revoked_at`.
+- Claude Code or other clients: header `Authorization: Bearer <key>`. Create keys on the Account page under "AI access (MCP)": the key is shown once, only its SHA-256 hash is stored. Revoke keys there as well.
 
 ## Contributing
 

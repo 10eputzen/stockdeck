@@ -468,5 +468,30 @@
     "draggableItem": "draggable item",
     "addedByUser": "added by {{user}}",
     "removeSymbol": "Remove {{symbol}}"
+  },
+  "apiKeys": {
+    "section": "AI access (MCP)",
+    "hint": "claude.ai: add the address as a connector, sign-in runs through the app. Claude Code and other clients: header “Authorization: Bearer <key>” with an API key from here.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Copy failed, please select it by hand.",
+    "create": "Create API key",
+    "createTitle": "New API key",
+    "labelField": "Label (e.g. device or program)",
+    "freshTitle": "API key “{{label}}”",
+    "freshHint": "Shown only now. Only a hash is stored, the key cannot be displayed again later.",
+    "done": "Done",
+    "none": "No API keys yet.",
+    "createdOn": "created {{date}}",
+    "lastUsed": "last used {{date}}",
+    "neverUsed": "never used",
+    "revoke": "Revoke",
+    "revokeTitle": "Revoke API key “{{label}}”?",
+    "revokeMsg": "Programs using this key lose access immediately.",
+    "revoked": "“{{label}}” revoked",
+    "errLoad": "Could not load API keys.",
+    "errCreate": "Could not create the API key.",
+    "errTooMany": "At most 20 active API keys. Revoke one first.",
+    "errRevoke": "Revoking failed."
   }
 }

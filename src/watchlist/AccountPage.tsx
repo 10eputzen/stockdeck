@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { Columns } from "../lib/columns";
 import { ColumnList } from "../ColumnMenu";
 import { LangChoice, ThemeChoice } from "../ThemeSwitch";
+import { ApiKeysSection } from "./ApiKeysSection";
 
 const AlertsSection = lazy(() =>
   import("../Alerts").then((m) => ({ default: m.AlertsSection })),
@@ -39,6 +40,7 @@ export function AccountPage({
       <Suspense fallback={null}>
         <AlertsSection onToast={onToast} onOpen={onOpen} />
       </Suspense>
+      <ApiKeysSection onToast={onToast} />
       <h2 className="mh2">{t("watchlist.listSection")}</h2>
       <div className="mcard">
         <button className="mitem" onClick={onAddGroup}>

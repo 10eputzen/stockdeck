@@ -468,5 +468,30 @@
     "draggableItem": "verschiebbarer Wert",
     "addedByUser": "hinzugefügt von {{user}}",
     "removeSymbol": "{{symbol}} entfernen"
+  },
+  "apiKeys": {
+    "section": "KI-Zugriff (MCP)",
+    "hint": "claude.ai: Adresse als Connector hinzufügen, die Anmeldung läuft über die App. Claude Code und andere Clients: Header „Authorization: Bearer <Schlüssel>“ mit einem API-Key von hier.",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "copyFailed": "Kopieren fehlgeschlagen, bitte von Hand markieren.",
+    "create": "API-Key anlegen",
+    "createTitle": "Neuer API-Key",
+    "labelField": "Bezeichnung (z. B. Gerät oder Programm)",
+    "freshTitle": "API-Key „{{label}}“",
+    "freshHint": "Nur jetzt sichtbar. Gespeichert wird nur ein Hash, der Schlüssel lässt sich später nicht mehr anzeigen.",
+    "done": "Fertig",
+    "none": "Noch keine API-Keys.",
+    "createdOn": "angelegt {{date}}",
+    "lastUsed": "zuletzt genutzt {{date}}",
+    "neverUsed": "noch nie genutzt",
+    "revoke": "Widerrufen",
+    "revokeTitle": "API-Key „{{label}}“ widerrufen?",
+    "revokeMsg": "Programme mit diesem Schlüssel verlieren sofort den Zugriff.",
+    "revoked": "„{{label}}“ widerrufen",
+    "errLoad": "API-Keys konnten nicht geladen werden.",
+    "errCreate": "API-Key konnte nicht angelegt werden.",
+    "errTooMany": "Höchstens 20 aktive API-Keys. Widerrufe zuerst einen.",
+    "errRevoke": "Widerrufen fehlgeschlagen."
   }
 }
