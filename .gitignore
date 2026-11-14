@@ -30,3 +30,4 @@ supabase/.branches
 
 .env.*
 !.env.example
+setup.env

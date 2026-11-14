@@ -92,34 +92,47 @@ Example in Claude: *“Which stocks in my Tech group dropped today, and what do 
 
 ## Run your own instance
 
-You need Node 22+, the [Supabase CLI](https://supabase.com/docs/guides/cli), a Supabase project, a Finnhub API key (the free tier is fine for trying it out) and a Google OAuth client for sign-in.
+You need Node 22+, a free [Supabase](https://supabase.com) project, a [Finnhub](https://finnhub.io) API key (free tier is fine for trying it out) and a Google OAuth client for sign-in.
 
-1. **Environment:** `cp .env.example .env` and fill it in (Supabase URL and publishable key, app URL, VAPID public key; Cloudflare values only for `npm run deploy`).
-2. **VAPID keys** (web push): `npx web-push generate-vapid-keys`. Put the public key into `.env` (`VITE_VAPID_PUBLIC_KEY`) and both keys into the function secrets (step 4).
-3. **Database:** in the SQL editor, create the vault secrets for the cron job first, then push the migrations:
-   ```sql
-   select vault.create_secret('https://<project-ref>.supabase.co', 'project_url');
-   select vault.create_secret('<random-string>', 'alerts_cron_secret');
-   ```
-   ```bash
-   supabase link --project-ref <project-ref>
-   supabase db push
-   ```
-4. **Function secrets:** copy `supabase/functions/.env.example` to `supabase/functions/.env`, fill it in, then:
-   ```bash
-   supabase secrets set --env-file supabase/functions/.env
-   supabase functions deploy market alerts mcp
-   ```
-5. **Auth in the Supabase dashboard:** enable the Google provider (disable email sign-in), set the site URL and redirect URLs (app URL, `https://*.<your-domain>/**`, `<app-url>/oauth/consent**`), and point the “Before User Created” hook to `public.hook_before_user_created`. For the MCP connector, enable the OAuth server with dynamic client registration.
-6. **Grant access:** accounts can only be created for addresses in `allowed_emails`. Add the first one in the SQL editor; it becomes admin and can invite others through shared lists:
-   ```sql
-   insert into public.allowed_emails (email, is_admin) values ('you@example.com', true);
-   ```
-7. **Run the frontend locally:**
-   ```bash
-   npm install
-   npm run dev
-   ```
+**1. Collect the values**
+
+| Value | Where |
+| --- | --- |
+| Supabase access token and project ref | [Account → Access tokens](https://supabase.com/dashboard/account/tokens); the ref is in Project Settings → General |
+| Finnhub API key | [finnhub.io/dashboard](https://finnhub.io/dashboard) |
+| Google OAuth client ID and secret | Google Cloud console → APIs & Services → Credentials → OAuth client ID (type “Web application”) |
+
+**2. Run the setup**
+
+```bash
+npm install
+npm run setup
+```
+
+The script asks for the values above and your Google email, then sets up everything on the Supabase side: vault secrets, migrations, Edge Function secrets and deploy, Google sign-in, redirect URLs, the sign-up hook, the OAuth server for MCP, your account as first admin, and a `.env` for the frontend. It generates the web push (VAPID) keys itself. Running it again is safe. For an unattended run, put the values in `setup.env` (gitignored) or the environment and use `npm run setup -- --yes`; the variable names are in the header of `scripts/setup.mjs`.
+
+**3. One manual step:** in the Google OAuth client, add `https://<project-ref>.supabase.co/auth/v1/callback` as an authorized redirect URI (the script prints the exact URL).
+
+**4. Start the app**
+
+```bash
+npm run dev
+```
+
+Open http://localhost:5173 and sign in with Google. Invite others through shared lists.
+
+<details>
+<summary>Manual setup (what the script does)</summary>
+
+1. Vault secrets for the cron job, in the SQL editor: `select vault.create_secret('https://<project-ref>.supabase.co', 'project_url');` and `select vault.create_secret('<random-string>', 'alerts_cron_secret');`
+2. Migrations: `supabase link --project-ref <project-ref>` and `supabase db push`.
+3. VAPID keys: `npx web-push generate-vapid-keys`.
+4. Function secrets: copy `supabase/functions/.env.example` to `supabase/functions/.env`, fill it in, then `supabase secrets set --env-file supabase/functions/.env` and `supabase functions deploy market alerts mcp`.
+5. Auth in the dashboard: enable Google (disable email sign-in), set the site URL and redirect URLs (app URL, `https://*.<your-domain>/**`, `<app-url>/oauth/consent**`), point the “Before User Created” hook to `public.hook_before_user_created`, enable the OAuth server with dynamic client registration.
+6. First admin: `insert into public.allowed_emails (email, is_admin) values ('you@example.com', true);`
+7. Frontend: `cp .env.example .env` and fill in the Supabase URL, publishable key, app URL and VAPID public key.
+
+</details>
 
 ## Development
 
@@ -132,7 +145,7 @@ CI runs lint, type check and tests on pull requests (`.github/workflows/ci.yml`)
 ## Deploy
 
 - **Frontend:** `npm run build` produces a static `dist/` (including `_headers` with a CSP for Cloudflare Pages). `npm run deploy` builds, checks the bundle, deploys to Cloudflare Pages and smoke-tests the live URL in a headless browser (Playwright). Values and tokens come from the environment, `.env`/`.env.deploy`, or (with `STOCKDECK_GCP_PROJECT`) from Google Cloud Secret Manager; see the header of `scripts/deploy-frontend.mjs`. Any static host works too: upload `dist/` (`_headers` is Cloudflare-specific).
-- **Backend:** `supabase db push` and `supabase functions deploy market alerts mcp`.
+- **Backend:** `npm run setup` again (applies new migrations, redeploys the functions), or `supabase db push` and `supabase functions deploy market alerts mcp`.
 
 ## AI access (MCP)
 
