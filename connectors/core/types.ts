@@ -40,12 +40,27 @@ export type Candidate = {
   [other: string]: unknown
 }
 
+/** One depot position, for banks that report holdings instead of transactions. Only these fields are read from the helper's output. */
+export type Position = {
+  isin: string
+  quantity: number
+  /** Current market price per unit, in `currency`. */
+  price: number
+  currency: string
+  /** Date of the market price, YYYY-MM-DD. */
+  date: string
+  /** Average acquisition price per unit as reported by the bank, if any. */
+  acquisitionPrice: number | null
+}
+
 export type ParseOutput = {
   rows: Candidate[]
   /** Rows the connector skipped on purpose, e.g. pending orders. Reason text must not contain row data. */
   skipped: { reason: string }[]
   /** Optional local cross-check, e.g. holdings per ISIN from the bank. Never exported. */
   holdings?: Map<string, number>
+  /** Holdings with prices, for banks without a transaction history (e.g. DKB via FinTS). */
+  positions?: Position[]
 }
 
 export type FetchOptions = {

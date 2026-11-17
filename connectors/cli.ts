@@ -58,11 +58,11 @@ async function main() {
     console.log(`Usage: npm run connect -- <bank> [--upload] [--full] [--portfolio "<name>"] [--out <dir>] [--check-holdings]\nBanks: ${ids}`)
     process.exit(values.help ? 0 : 1)
   }
-  const connector = findConnector(positionals[0], { checkHoldings: values['check-holdings'] })
+  const env = { ...loadEnvFile('.env.connect'), ...process.env }
+  const connector = findConnector(positionals[0], { checkHoldings: values['check-holdings'], env })
   if (!connector) throw new Error(`Unknown bank "${positionals[0]}". Available: ${ids}`)
 
   // Check the upload target before the user logs in at the bank
-  const env = { ...loadEnvFile('.env.connect'), ...process.env }
   const target = values.upload
     ? { url: env.STOCKDECK_MCP_URL ?? '', apiKey: env.STOCKDECK_API_KEY ?? '', portfolio: values.portfolio ?? connector.name }
     : null
