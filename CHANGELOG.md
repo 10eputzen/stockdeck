@@ -9,6 +9,10 @@ All notable changes to this project are documented here. The format follows [Kee
 - Local bank connectors (#10): `npm run connect -- tr --upload` reads your own Trade Republic transactions via pytr on your computer and uploads them into your instance; later runs fetch only what is new since the last import (`--full` for everything); without `--upload` it writes a file the CSV import recognizes. Only date, type, ISIN, quantity, amount, currency, fees and taxes are kept. Personal use only, see `connectors/README.md`.
 - Export portfolio transactions as CSV (#4): "Export" on the portfolio page saves all transactions, the depot menu (⋮) saves one depot. The file uses the simple import format and re-imports 1:1, including FX rate and note; a re-import into the same account recognizes the transactions as duplicates.
 
+### Changed
+
+- Tests for the Edge Functions (#7): alert rule evaluation (price above/below, daily move, take-profit/stop, dedupe keys) and the MCP checks (key extraction, OAuth vs. API key, origin, protocol version, rate limit, user scoping of every query) now run with `npm test`, so CI covers them on every pull request. The pure logic moved into `alerts/evaluate.ts` and `mcp/guard.ts`; behaviour is unchanged.
+
 ## [1.1.0] – 2026-11-14
 
 ### Added

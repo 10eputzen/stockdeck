@@ -17,28 +17,26 @@ import { getProfiles, getQuotes, searchSymbols, SYMBOL_RE } from "../_shared/fin
 import { getChart, getNewsPage, isRange } from "../_shared/history.ts";
 import { getSignals } from "../_shared/signals.ts";
 import { callPortfolioTool, PORTFOLIO_TOOLS, PortfolioError } from "./portfolio.ts";
+import {
+  allowedOrigins,
+  extractKey,
+  isOAuthClientToken,
+  JWT_RE,
+  negotiateVersion,
+  originAllowed,
+  PROTOCOL_VERSIONS,
+  RATE_LIMIT,
+  retryAfter,
+  versionSupported,
+} from "./guard.ts";
 import { TOOLS } from "./tools.ts";
 
 const SITE_URL = Deno.env.get("SITE_URL") ?? "";
 
 const SERVER = { name: "stockdeck", version: "1.4.0" };
-const PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
-const RATE_LIMIT = 60;
 const MAX_ITEMS = 200;
 
-const originOf = (url: string) => {
-  try {
-    return new URL(url).origin;
-  } catch {
-    return "";
-  }
-};
-// Browser-Clients dürfen nur von hier kommen; Server-Clients (claude.ai, Claude Code) schicken keinen Origin
-const ALLOWED_ORIGINS = new Set(
-  [SITE_URL, "https://claude.ai", "https://claude.com", ...(Deno.env.get("MCP_ALLOWED_ORIGINS") ?? "").split(",")]
-    .map((o) => originOf(o.trim()))
-    .filter(Boolean),
-);
+const ALLOWED_ORIGINS = allowedOrigins(SITE_URL, Deno.env.get("MCP_ALLOWED_ORIGINS") ?? "");
 
 function corsFor(origin: string | null) {
   return {
@@ -54,8 +52,6 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 // Öffentliche Adresse der Function (SUPABASE_URL ist in der Edge Runtime die öffentliche Projekt-URL)
 const RESOURCE = `${SUPABASE_URL}/functions/v1/mcp`;
 const RESOURCE_METADATA = `${RESOURCE}/.well-known/oauth-protected-resource`;
-// Supabase-JWTs (Header.Payload.Signatur, base64url) von API-Keys unterscheiden
-const JWT_RE = /^eyJ[\w-]+\.[\w-]+\.[\w-]+$/;
 
 type JsonRpcId = string | number | null;
 type JsonRpcRequest = { jsonrpc: "2.0"; id?: JsonRpcId; method: string; params?: Record<string, unknown> };
@@ -76,29 +72,10 @@ const fail = (id: JsonRpcId, code: number, message: string) => ({
   error: { code, message },
 });
 
-function extractKey(req: Request): string | null {
-  const auth = req.headers.get("authorization") ?? "";
-  if (auth.toLowerCase().startsWith("bearer ")) return auth.slice(7).trim();
-  const header = req.headers.get("x-api-key");
-  if (header) return header.trim();
-  // Schlüssel in der URL (…/mcp/<key>) gibt es seit der OAuth-Umstellung nicht mehr
-  return null;
-}
-
-/** Claims eines JWT ohne Signaturprüfung (die macht danach Supabase Auth). */
-function claims(token: string): Record<string, unknown> | null {
-  try {
-    const part = token.split(".")[1].replaceAll("-", "+").replaceAll("_", "/");
-    return JSON.parse(atob(part.padEnd(part.length + ((4 - (part.length % 4)) % 4), "=")));
-  } catch {
-    return null;
-  }
-}
-
 /** Nutzer aus einem OAuth-Access-Token, nur für freigeschaltete Konten; db läuft mit seinen Rechten (RLS). */
 async function oauthUser(token: string): Promise<{ userId: string; db: SupabaseClient } | null> {
   // Nur Tokens, die der OAuth-Server für einen Client ausgestellt hat: Login-Tokens der App haben kein client_id
-  if (typeof claims(token)?.client_id !== "string") return null;
+  if (!isOAuthClientToken(token)) return null;
   const db = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false },
@@ -341,9 +318,8 @@ async function handle(msg: JsonRpcRequest, db: SupabaseClient, admin: SupabaseCl
   const id = msg.id ?? null;
   switch (msg.method) {
     case "initialize": {
-      const requested = String(msg.params?.protocolVersion ?? "");
       return ok(id, {
-        protocolVersion: PROTOCOL_VERSIONS.includes(requested) ? requested : PROTOCOL_VERSIONS[0],
+        protocolVersion: negotiateVersion(msg.params?.protocolVersion),
         capabilities: { tools: { listChanged: false } },
         serverInfo: SERVER,
         instructions:
@@ -384,7 +360,7 @@ async function handle(msg: JsonRpcRequest, db: SupabaseClient, admin: SupabaseCl
 Deno.serve(async (req) => {
   // Origin prüfen (Schutz gegen DNS-Rebinding): fremde Browser-Herkunft → 403
   const origin = req.headers.get("origin");
-  const allowed = !origin || ALLOWED_ORIGINS.has(origin);
+  const allowed = originAllowed(origin, ALLOWED_ORIGINS);
   const res = allowed ? await route(req) : json(fail(null, -32600, "Origin not allowed"), 403);
   for (const [k, v] of Object.entries(corsFor(allowed ? origin : null))) res.headers.set(k, v);
   return res;
@@ -405,11 +381,11 @@ async function route(req: Request): Promise<Response> {
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405, { Allow: "POST, OPTIONS" });
 
   const version = req.headers.get("mcp-protocol-version");
-  if (version && !PROTOCOL_VERSIONS.includes(version)) {
+  if (!versionSupported(version)) {
     return json(fail(null, -32600, `Unsupported protocol version ${version}; supported: ${PROTOCOL_VERSIONS.join(", ")}`), 400);
   }
 
-  const key = extractKey(req);
+  const key = extractKey(req.headers);
   if (!key) return unauthorized();
   const admin = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false },
@@ -443,7 +419,7 @@ async function route(req: Request): Promise<Response> {
     const { data: allowed, error } = await admin.rpc("mcp_take_call", { p_user: auth.userId, p_limit: RATE_LIMIT });
     if (error) console.error("rate limit", error);
     if (allowed === false) {
-      const retry = String(60 - new Date().getSeconds());
+      const retry = retryAfter();
       return json(fail(m.id, -32000, `Rate limit: at most ${RATE_LIMIT} tool calls per minute`), 429, { "Retry-After": retry });
     }
   }

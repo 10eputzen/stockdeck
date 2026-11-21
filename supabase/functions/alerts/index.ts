@@ -5,23 +5,11 @@ import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
 import { getQuotes } from "../_shared/finnhub.ts";
 import { getFx } from "../_shared/portfolio.ts";
-import { holdings, valuate, type Tx } from "../_shared/positions.ts";
+import { holdings, type Tx } from "../_shared/positions.ts";
 import { isAllowedOrigin } from "../_shared/cors.ts";
-import { asLang, fmt, TEXTS, type Lang } from "./texts.ts";
+import { berlinNow, evaluateRules, type Push, type Quote, type Rule } from "./evaluate.ts";
+import { asLang, TEXTS, type Lang } from "./texts.ts";
 
-
-type Rule = {
-  id: string;
-  user_id: string;
-  kind: "price_above" | "price_below" | "change_pct_day" | "finanzplan_gain" | "finanzplan_stop";
-  symbol: string | null;
-  threshold: number;
-  params: { weeks?: number; exclude?: string[]; since?: string };
-};
-/** Text je Sprache: jedes Gerät bekommt den Push in seiner Sprache. */
-type Text = (lang: Lang) => { title: string; body: string };
-type Push = { text: Text; url: string; tag?: string };
-type NewEvent = { user_id: string; rule_id: string; kind: string; symbol: string; title: string; body: string; dedupe_key: string };
 
 webpush.setVapidDetails(
   Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@example.com",
@@ -29,18 +17,6 @@ webpush.setVapidDetails(
   Deno.env.get("VAPID_PRIVATE_KEY")!,
 );
 
-
-/** Berliner Datum und ob gerade gehandelt wird (Mo–Fr 8:00–22:15, deckt Xetra und US-Börsen ab). */
-function berlinNow() {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", weekday: "short", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false })
-      .formatToParts(new Date())
-      .map((p) => [p.type, p.value]),
-  );
-  const minutes = Number(parts.hour) * 60 + Number(parts.minute);
-  const open = !["Sat", "Sun"].includes(parts.weekday) && minutes >= 8 * 60 && minutes <= 22 * 60 + 15;
-  return { date: `${parts.year}-${parts.month}-${parts.day}`, open };
-}
 
 async function sendToUser(admin: SupabaseClient, userId: string, msg: Push): Promise<number> {
   const { data: subs } = await admin.from("push_subscriptions").select("id, endpoint, p256dh, auth, lang").eq("user_id", userId);
@@ -88,7 +64,7 @@ async function run(admin: SupabaseClient) {
   const symbols = new Set<string>();
   for (const r of all) if (r.symbol) symbols.add(r.symbol);
   for (const { hs } of userHoldings.values()) for (const h of hs) if (h.quantity > 1e-6) symbols.add(h.symbol);
-  const quotes: Record<string, { price: number; change: number; change_pct: number; currency?: string | null }> = {};
+  const quotes: Record<string, Quote> = {};
   const list = [...symbols];
   for (const q of await getQuotes(admin, list)) quotes[q.symbol] = q;
 
@@ -97,69 +73,7 @@ async function run(admin: SupabaseClient) {
   const { data: subLangs } = await admin.from("push_subscriptions").select("user_id, lang").order("created_at", { ascending: true });
   for (const s of subLangs ?? []) langOf.set(s.user_id, asLang(s.lang));
 
-  const events: (NewEvent & { push: Push })[] = [];
-  const oneShot: string[] = [];
-  for (const r of all) {
-    const thr = Number(r.threshold);
-    const lang = langOf.get(r.user_id) ?? "de";
-    if (r.symbol) {
-      const q = quotes[r.symbol];
-      if (!q || !(q.price > 0)) continue;
-      const url = `/#/s/${encodeURIComponent(r.symbol)}`;
-      if ((r.kind === "price_above" && q.price >= thr) || (r.kind === "price_below" && q.price <= thr)) {
-        const sym = r.symbol, above = r.kind === "price_above";
-        const text: Text = (L) => {
-          const { pct, num } = fmt(L);
-          return { title: TEXTS[L].priceTitle(sym, above, num(thr, q.currency)), body: TEXTS[L].priceBody(num(q.price, q.currency), pct(q.change_pct)) };
-        };
-        const { title, body } = text(lang);
-        events.push({ user_id: r.user_id, rule_id: r.id, kind: r.kind, symbol: r.symbol, title, body, dedupe_key: `rule:${r.id}:${today}`, push: { text, url, tag: r.id } });
-        oneShot.push(r.id);
-      } else if (r.kind === "change_pct_day" && Math.abs(q.change_pct) >= thr) {
-        const sym = r.symbol;
-        const text: Text = (L) => {
-          const { pct, num } = fmt(L);
-          return { title: TEXTS[L].dayTitle(sym, pct(q.change_pct)), body: TEXTS[L].dayBody(num(q.price, q.currency), num(thr)) };
-        };
-        const { title, body } = text(lang);
-        events.push({ user_id: r.user_id, rule_id: r.id, kind: r.kind, symbol: r.symbol, title, body, dedupe_key: `rule:${r.id}:${today}`, push: { text, url, tag: r.id } });
-      }
-      continue;
-    }
-
-    const u = userHoldings.get(r.user_id);
-    if (!u) continue;
-    const exclude = new Set(r.params?.exclude ?? []);
-    const isinOf = new Map(u.txs.filter((t) => t.isin).map((t) => [`${t.portfolio_id}|${t.symbol}`, t.isin!]));
-    const { positions } = valuate(u.hs, quotes, fx);
-    const since = new Date(Date.parse(today) - (r.params?.weeks ?? 4) * 7 * 864e5).toISOString().slice(0, 10);
-    for (const p of positions) {
-      // Nur Käufe ab Start der Regel, ältere Positionen bleiben außen vor
-      if (p.gain_pct == null || !p.opened || (r.params?.since && p.opened < r.params.since)) continue;
-      const isin = isinOf.get(`${p.portfolio_id}|${p.symbol}`);
-      if (exclude.has(p.symbol) || (isin && exclude.has(isin))) continue;
-      const g = p.gain_pct * 100;
-      const name = p.name ?? p.symbol;
-      const url = `/#/s/${encodeURIComponent(p.symbol)}`;
-      const key = `${r.kind}:${p.portfolio_id}:${p.symbol}:${p.opened}`;
-      if (r.kind === "finanzplan_gain" && g >= thr && p.opened >= since) {
-        const weeks = r.params?.weeks ?? 4, opened = p.opened;
-        const text: Text = (L) => {
-          const { pct, num, date } = fmt(L);
-          return { title: TEXTS[L].gainTitle(name, pct(g)), body: TEXTS[L].gainBody(num(thr), weeks, date(opened)) };
-        };
-        const { title, body } = text(lang);
-        events.push({ user_id: r.user_id, rule_id: r.id, kind: r.kind, symbol: p.symbol, title, body, dedupe_key: key, push: { text, url, tag: key } });
-      } else if (r.kind === "finanzplan_stop" && g <= -thr) {
-        const text: Text = (L) => {
-          const { pct, num } = fmt(L);
-          return { title: TEXTS[L].stopTitle(name, pct(g)), body: TEXTS[L].stopBody(num(thr)) };
-        };
-        const { title, body } = text(lang);
-        events.push({ user_id: r.user_id, rule_id: r.id, kind: r.kind, symbol: p.symbol, title, body, dedupe_key: key, push: { text, url, tag: key } });
-      }
-    }
-  }
+  const { events, oneShot } = evaluateRules({ rules: all, quotes, userHoldings, fx, today, langOf });
 
   let fired = 0;
   for (const e of events) {
