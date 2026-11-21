@@ -52,7 +52,7 @@ export function parseDate(raw: string | undefined): string | null {
   return null
 }
 
-function splitLine(line: string, sep: string): string[] {
+export function splitLine(line: string, sep: string): string[] {
   const out: string[] = []
   let cur = ''
   let quoted = false

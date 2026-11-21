@@ -8,6 +8,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - Local bank connectors (#10): `npm run connect -- tr --upload` reads your own Trade Republic transactions via pytr on your computer and uploads them into your instance; later runs fetch only what is new since the last import (`--full` for everything); without `--upload` it writes a file the CSV import recognizes. Only date, type, ISIN, quantity, amount, currency, fees and taxes are kept. Personal use only, see `connectors/README.md`.
 - Export portfolio transactions as CSV (#4): "Export" on the portfolio page saves all transactions, the depot menu (⋮) saves one depot. The file uses the simple import format and re-imports 1:1, including FX rate and note; a re-import into the same account recognizes the transactions as duplicates.
+- Watchlist import (#6): besides TradingView exports, the import now takes a pasted ticker list (separated by commas, spaces, semicolons or new lines) or a CSV with a Symbol/Ticker column (optional Group column). The preview shows company names, flags unknown symbols and skips them, and symbols without a group can go to a chosen group.
 
 ### Changed
 
