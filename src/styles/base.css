@@ -246,3 +246,20 @@ body.col-resizing { cursor: col-resize; user-select: none; }
 }
 .share p.small { min-height: 1.4em; margin: 8px 0 0; }
 .share .members .small { margin: 0; }
+
+/* Befehlspalette */
+.dialog.palette { width: min(560px, calc(100vw - 32px)); padding: 0; margin-top: 12vh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; max-height: 70vh; }
+.palette-input { border: 0; border-bottom: 1px solid var(--border); border-radius: 0; padding: 14px 16px; font-size: 1rem; background: transparent; outline: none; }
+.palette-list { list-style: none; margin: 0; padding: 6px; overflow-y: auto; height: 340px; }
+.palette-head { display: block; padding: 8px 10px 4px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.palette-item { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 10px; border-radius: 6px; cursor: pointer; }
+.palette-item.on { background: var(--hover); box-shadow: inset 2px 0 0 var(--accent); }
+.palette-label { font-weight: 600; white-space: nowrap; }
+.palette-detail { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.palette-add { margin-left: auto; padding: 2px 8px; font-size: 0.75rem; visibility: hidden; }
+.palette-item.on .palette-add, .palette-item:hover .palette-add { visibility: visible; }
+.palette-empty { padding: 16px 10px; }
+.palette-keys { padding: 8px 16px; border-top: 1px solid var(--border); }
+.desktabs .palette-hint { margin-left: auto; align-self: center; background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); padding: 4px 8px; font-size: 0.75rem; display: inline-flex; gap: 8px; align-items: center; }
+.desktabs .palette-hint:hover { color: var(--text); }
+.desktabs .palette-hint kbd { font: inherit; font-size: 0.7rem; border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; }

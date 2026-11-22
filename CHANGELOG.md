@@ -17,6 +17,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - Manage the sign-up allowlist in the app (#2): admins see an "Access" section on the Account page to grant access by email, make someone an admin or remove the role, and revoke access. Revoking locks the app but keeps the account and its data. The database enforces it through admin-only functions (the table itself stays unreadable); an admin cannot revoke or demote themselves, so there is always one admin left. Needs the new migration.
 - Database tests: `npm test` runs all migrations in PGlite and checks the allowlist permissions.
 
+- Command palette: Ctrl+K / Cmd+K (or `/`) opens a quick switcher on desktop. Type to jump to a stock in your watchlist, find new stocks and open them (Shift+Enter adds them to the watchlist), go to Watchlist/Portfolio/Account, create a group, import, or switch light/dark. Fully keyboard-driven; a "Search & commands" button in the tab bar opens it too.
+
 ### Changed
 
 - Segmented controls size to their number of buttons (the Today/Total switch no longer has an empty third slot).

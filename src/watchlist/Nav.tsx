@@ -31,7 +31,7 @@ const TABS: { route: Route; label: string }[] = [
 ];
 
 /** Reiter auf dem Desktop: Watchlist und Portfolio. */
-export function DeskTabs({ route, go }: { route: Route; go: (r: Route) => void }) {
+export function DeskTabs({ route, go, onPalette }: { route: Route; go: (r: Route) => void; onPalette?: () => void }) {
   const { t } = useTranslation();
   const nav = useRef<HTMLElement>(null);
   const bar = useRef<HTMLSpanElement>(null);
@@ -67,6 +67,11 @@ export function DeskTabs({ route, go }: { route: Route; go: (r: Route) => void }
               : t("watchlist.tabAccountAlerts")}
         </button>
       ))}
+      {onPalette && (
+        <button className="palette-hint" onClick={onPalette} title={t("palette.title")}>
+          {t("palette.open")} <kbd>{/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘K" : "Ctrl K"}</kbd>
+        </button>
+      )}
     </nav>
   );
 }

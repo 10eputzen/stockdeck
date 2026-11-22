@@ -562,5 +562,25 @@
     "errExists": "Diese Adresse hat schon Zugang.",
     "errForbidden": "Nur Admins dürfen das.",
     "errGeneric": "Das hat nicht geklappt."
+  },
+  "palette": {
+    "title": "Befehlspalette",
+    "open": "Suchen & Befehle",
+    "placeholder": "Aktie, Bereich oder Befehl …",
+    "inWatchlist": "In der Watchlist",
+    "addNew": "Neue Werte",
+    "goTo": "Gehe zu",
+    "actions": "Aktionen",
+    "goWatchlist": "Watchlist",
+    "goPortfolio": "Portfolio",
+    "goAccount": "Konto & Alarme",
+    "newGroup": "Neue Gruppe",
+    "import": "Watchlist importieren",
+    "themeLight": "Helles Design",
+    "themeDark": "Dunkles Design",
+    "add": "Watchlist",
+    "addHint": "Zur Watchlist hinzufügen (Umschalt+Enter)",
+    "nothing": "Nichts gefunden",
+    "keys": "↑↓ wählen · Enter öffnen · Umschalt+Enter zur Watchlist · Esc schließen"
   }
 }
