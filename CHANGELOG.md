@@ -12,8 +12,11 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - Portfolio history chart (#5): the portfolio page shows the value of the open positions and the invested capital over time (1M / 6M / 1Y / Max), with the gain in the chosen period (change in value minus newly invested money). It is computed in the browser from your transactions and historical closes (split-adjusted, valued in EUR at today's ECB rates), ends at the live portfolio value, and loads the closes once per day. The `market` function now also returns split events and the quote currency with chart data, so positions sold before a later split are valued correctly (redeploy the function).
 
+- Portfolio analysis below the positions: a donut chart shows how the portfolio value splits across holdings, depots or currencies (click a holding to open it), and a dividend panel shows net dividends received in the last 12 months, this year and per year.
+
 ### Changed
 
+- Segmented controls size to their number of buttons (the Today/Total switch no longer has an empty third slot).
 - Tests for the Edge Functions (#7): alert rule evaluation (price above/below, daily move, take-profit/stop, dedupe keys) and the MCP checks (key extraction, OAuth vs. API key, origin, protocol version, rate limit, user scoping of every query) now run with `npm test`, so CI covers them on every pull request. The pure logic moved into `alerts/evaluate.ts` and `mcp/guard.ts`; behaviour is unchanged.
 
 ## [1.1.0] – 2026-11-14

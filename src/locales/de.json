@@ -352,6 +352,24 @@
         "1y": "1J",
         "max": "Max"
       }
+    },
+    "analysis": {
+      "allocation": "Aufteilung",
+      "groupBy": "Aufteilen nach",
+      "by": {
+        "position": "Werte",
+        "depot": "Depots",
+        "currency": "Währung"
+      },
+      "other": "Weitere",
+      "noValue": "Noch keine bewerteten Positionen.",
+      "dividends": "Dividenden",
+      "last12m": "Letzte 12 Monate",
+      "thisYear": "Dieses Jahr",
+      "perYear": "Dividenden je Jahr",
+      "payments_one": "{{count}} Zahlung",
+      "payments_other": "{{count}} Zahlungen",
+      "noDividends": "Noch keine Dividenden gebucht."
     }
   },
   "detail": {

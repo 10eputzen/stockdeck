@@ -16,6 +16,7 @@ import {
   type Quote,
   type Transaction,
 } from './lib/supabase'
+import { AnalysisCard } from './portfolio/AnalysisCard'
 import { HistoryCard } from './portfolio/HistoryCard'
 import { PfMenu, PosHead, PosRow, TotalsCard, type Mode } from './portfolio/Rows'
 import { pfDir as dirOf } from './portfolio/format'
@@ -268,6 +269,9 @@ export function PortfolioPage({
                 )
               })}
         </div>
+      )}
+      {data && view && data.portfolios.length > 0 && (
+        <AnalysisCard positions={view.positions} portfolios={data.portfolios} profiles={data.profiles} txs={data.txs} fx={data.fx} onOpen={onOpen} />
       )}
       {data && data.portfolios.length > 0 && (
         <p className="muted small">{t('portfolio.valuationNote')}</p>
