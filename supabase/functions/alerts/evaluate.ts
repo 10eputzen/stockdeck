@@ -1,12 +1,12 @@
 // Regelauswertung der Alerts ohne Deno-, Netz- oder Datenbankzugriff, damit Vitest sie prüfen kann.
 // index.ts lädt Regeln, Kurse und Positionen, ruft evaluateRules auf und verschickt die Ereignisse.
 import { valuate, type FxRates, type Holding, type Tx } from "../_shared/positions.ts";
-import { fmt, TEXTS, type Lang } from "./texts.ts";
+import { fmt, TEXTS, type Hour, type Lang } from "./texts.ts";
 
 export type Rule = {
   id: string;
   user_id: string;
-  kind: "price_above" | "price_below" | "change_pct_day" | "finanzplan_gain" | "finanzplan_stop";
+  kind: "price_above" | "price_below" | "change_pct_day" | "finanzplan_gain" | "finanzplan_stop" | "earnings_tomorrow";
   symbol: string | null;
   threshold: number;
   params: { weeks?: number; exclude?: string[]; since?: string };
@@ -16,6 +16,8 @@ export type Quote = { price: number; change: number; change_pct: number; currenc
 export type Text = (lang: Lang) => { title: string; body: string };
 export type Push = { text: Text; url: string; tag?: string };
 export type NewEvent = { user_id: string; rule_id: string; kind: string; symbol: string; title: string; body: string; dedupe_key: string };
+/** Nächster Quartalstermin je Symbol (symbol_events). */
+export type Earnings = { next_date: string | null; hour: Hour };
 export type UserHoldings = Map<string, { hs: Holding[]; txs: (Tx & { isin: string | null })[] }>;
 
 /** Berliner Datum und ob gerade gehandelt wird (Mo–Fr 8:00–22:15, deckt Xetra und US-Börsen ab). */
@@ -30,6 +32,18 @@ export function berlinNow(now = new Date()) {
   return { date: `${parts.year}-${parts.month}-${parts.day}`, open };
 }
 
+/** Nächster Handelstag (Mo–Fr) nach `today` (YYYY-MM-DD): freitags der Montag. */
+export function nextTradingDay(today: string): string {
+  const d = new Date(`${today}T12:00:00Z`);
+  do d.setUTCDate(d.getUTCDate() + 1);
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Symbole, deren Quartalszahlen eine Regel betrifft: das Symbol der Regel oder die ganze Watchlist. */
+export const earningsSymbols = (r: Rule, watchlists: Map<string, string[]>) =>
+  r.symbol ? [r.symbol] : (watchlists.get(r.user_id) ?? []);
+
 /**
  * Ereignisse für alle Regeln. Doppelte Pushes verhindert der dedupe_key (eindeutig je Nutzer in alert_events):
  * Kurs- und Tagesregeln einmal pro Tag, Finanzplan-Regeln einmal pro Position (Depot, Symbol, Kaufdatum).
@@ -42,13 +56,35 @@ export function evaluateRules(input: {
   fx: FxRates;
   today: string;
   langOf: Map<string, Lang>;
+  /** Für Quartalszahlen-Regeln: Termine je Symbol und Watchlist-Symbole je Nutzer. */
+  earnings?: Record<string, Earnings>;
+  watchlists?: Map<string, string[]>;
 }): { events: (NewEvent & { push: Push })[]; oneShot: string[] } {
-  const { rules, quotes, userHoldings, fx, today, langOf } = input;
+  const { rules, quotes, userHoldings, fx, today, langOf, earnings = {}, watchlists = new Map() } = input;
+  const reportDay = nextTradingDay(today);
+  const tomorrow = Date.parse(reportDay) - Date.parse(today) === 864e5;
   const events: (NewEvent & { push: Push })[] = [];
   const oneShot: string[] = [];
   for (const r of rules) {
     const thr = Number(r.threshold);
     const lang = langOf.get(r.user_id) ?? "de";
+    if (r.kind === "earnings_tomorrow") {
+      // Einmal pro Termin und Nutzer, auch wenn Einzel- und Watchlist-Regel beide passen
+      for (const sym of earningsSymbols(r, watchlists)) {
+        const e = earnings[sym];
+        if (e?.next_date !== reportDay) continue;
+        const hour = e.hour;
+        const text: Text = (L) => {
+          const { day } = fmt(L);
+          return { title: TEXTS[L].earningsTitle(sym, day(reportDay, tomorrow)), body: TEXTS[L].earningsBody(hour) };
+        };
+        const { title, body } = text(lang);
+        const key = `earnings:${sym}:${reportDay}`;
+        if (events.some((x) => x.user_id === r.user_id && x.dedupe_key === key)) continue;
+        events.push({ user_id: r.user_id, rule_id: r.id, kind: r.kind, symbol: sym, title, body, dedupe_key: key, push: { text, url: `/#/s/${encodeURIComponent(sym)}`, tag: key } });
+      }
+      continue;
+    }
     if (r.symbol) {
       const q = quotes[r.symbol];
       if (!q || !(q.price > 0)) continue;
