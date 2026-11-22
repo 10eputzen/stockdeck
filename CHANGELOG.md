@@ -10,6 +10,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - Export portfolio transactions as CSV (#4): "Export" on the portfolio page saves all transactions, the depot menu (⋮) saves one depot. The file uses the simple import format and re-imports 1:1, including FX rate and note; a re-import into the same account recognizes the transactions as duplicates.
 - Watchlist import (#6): besides TradingView exports, the import now takes a pasted ticker list (separated by commas, spaces, semicolons or new lines) or a CSV with a Symbol/Ticker column (optional Group column). The preview shows company names, flags unknown symbols and skips them, and symbols without a group can go to a chosen group.
 
+- Portfolio history chart (#5): the portfolio page shows the value of the open positions and the invested capital over time (1M / 6M / 1Y / Max), with the gain in the chosen period (change in value minus newly invested money). It is computed in the browser from your transactions and historical closes (split-adjusted, valued in EUR at today's ECB rates), ends at the live portfolio value, and loads the closes once per day. The `market` function now also returns split events and the quote currency with chart data, so positions sold before a later split are valued correctly (redeploy the function).
+
 ### Changed
 
 - Tests for the Edge Functions (#7): alert rule evaluation (price above/below, daily move, take-profit/stop, dedupe keys) and the MCP checks (key extraction, OAuth vs. API key, origin, protocol version, rate limit, user scoping of every query) now run with `npm test`, so CI covers them on every pull request. The pure logic moved into `alerts/evaluate.ts` and `mcp/guard.ts`; behaviour is unchanged.

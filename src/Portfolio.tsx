@@ -16,6 +16,7 @@ import {
   type Quote,
   type Transaction,
 } from './lib/supabase'
+import { HistoryCard } from './portfolio/HistoryCard'
 import { PfMenu, PosHead, PosRow, TotalsCard, type Mode } from './portfolio/Rows'
 import { pfDir as dirOf } from './portfolio/format'
 import { TxDialog } from './TxDialog'
@@ -212,6 +213,8 @@ export function PortfolioPage({
       {error && <p className="error small">{error}</p>}
 
       <TotalsCard t={view?.totals} />
+
+      {(!data || data.txs.length > 0) && <HistoryCard userId={userId} txs={data?.txs} fx={data?.fx} quotes={data?.quotes} />}
 
       {empty ? (
         <div className="mcard pf-empty">

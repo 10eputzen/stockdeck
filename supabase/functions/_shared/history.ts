@@ -29,6 +29,10 @@ export type Chart = {
   /** Gibt es ältere Daten, die man nachladen kann? */
   more: boolean;
   bars: Bar[];
+  /** Währung der Kurse laut Yahoo (z. B. USD, EUR, GBp) */
+  currency?: string | null;
+  /** Splits im Zeitraum (Unix-Sekunden, Faktor neu/alt); die Kurse sind darum schon bereinigt. */
+  splits?: { t: number; factor: number }[];
 };
 
 export type NewsItem = {
@@ -68,6 +72,7 @@ export async function getChart(symbol: string, range: Range, before?: number): P
     const url = new URL(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahoo)}`);
     url.searchParams.set("interval", plan.interval);
     if (INTRADAY.has(plan.interval)) url.searchParams.set("includePrePost", "true");
+    else url.searchParams.set("events", "splits");
     if (before) {
       url.searchParams.set("period1", String(Math.max(0, before - plan.chunk)));
       url.searchParams.set("period2", String(before - 1));
@@ -91,6 +96,10 @@ export async function getChart(symbol: string, range: Range, before?: number): P
       if (bars.length && ts[i] <= bars[bars.length - 1].t) continue;
       bars.push({ t: ts[i], o: round(o), h: round(h), l: round(l), c: round(c), v: q.volume?.[i] ?? 0 });
     }
+    const splits = Object.values((r?.events?.splits ?? {}) as Record<string, { date?: number; numerator?: number; denominator?: number }>)
+      .filter((x) => x.date && x.numerator && x.denominator && x.numerator / x.denominator > 0)
+      .map((x) => ({ t: x.date!, factor: x.numerator! / x.denominator! }))
+      .sort((a, b) => a.t - b.t);
     const first = r?.meta?.firstTradeDate as number | undefined;
     const earliest = bars[0]?.t ?? before ?? 0;
     return {
@@ -101,6 +110,8 @@ export async function getChart(symbol: string, range: Range, before?: number): P
       prev_close: r?.meta?.chartPreviousClose ?? r?.meta?.previousClose ?? null,
       more: plan.chunk > 0 && bars.length > 0 && (!first || earliest > first + 86400),
       bars,
+      currency: typeof r?.meta?.currency === "string" ? r.meta.currency : null,
+      splits,
     };
   });
 }
