@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { Columns } from "../lib/columns";
 import { ColumnList } from "../ColumnMenu";
 import { LangChoice, ThemeChoice } from "../ThemeSwitch";
+import { AccessSection } from "./AccessSection";
 import { ApiKeysSection } from "./ApiKeysSection";
 
 const AlertsSection = lazy(() =>
@@ -11,6 +12,7 @@ const AlertsSection = lazy(() =>
 
 export function AccountPage({
   email,
+  admin,
   cols,
   setCols,
   onToast,
@@ -21,6 +23,7 @@ export function AccountPage({
   children,
 }: {
   email?: string;
+  admin?: boolean;
   cols: Columns;
   setCols: (c: Columns) => void;
   onToast: (text: string) => void;
@@ -41,6 +44,7 @@ export function AccountPage({
         <AlertsSection onToast={onToast} onOpen={onOpen} />
       </Suspense>
       <ApiKeysSection onToast={onToast} />
+      {admin && <AccessSection myEmail={email} onToast={onToast} />}
       <h2 className="mh2">{t("watchlist.listSection")}</h2>
       <div className="mcard">
         <button className="mitem" onClick={onAddGroup}>

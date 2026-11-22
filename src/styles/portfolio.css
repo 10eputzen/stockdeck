@@ -116,6 +116,10 @@
 .popover label.dragging { background: var(--bg); position: relative; z-index: 2; }
 .apikey-val { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 0.85rem; user-select: all; }
 .apikey-label { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.access-email { flex: 1; min-width: 0; overflow-wrap: anywhere; display: grid; gap: 2px; padding: 6px 0; }
+.access-email .small { margin: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.mitem.access-row { height: auto; min-height: 52px; }
+.access-tag { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 4px; background: var(--accent); color: var(--on-accent); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 .apikey-fresh { display: grid; gap: 8px; justify-items: start; }
 .apikey-fresh .alrow { width: 100%; }
 

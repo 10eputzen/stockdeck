@@ -14,6 +14,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - Portfolio analysis below the positions: a donut chart shows how the portfolio value splits across holdings, depots or currencies (click a holding to open it), and a dividend panel shows net dividends received in the last 12 months, this year and per year.
 
+- Manage the sign-up allowlist in the app (#2): admins see an "Access" section on the Account page to grant access by email, make someone an admin or remove the role, and revoke access. Revoking locks the app but keeps the account and its data. The database enforces it through admin-only functions (the table itself stays unreadable); an admin cannot revoke or demote themselves, so there is always one admin left. Needs the new migration.
+- Database tests: `npm test` runs all migrations in PGlite and checks the allowlist permissions.
+
 ### Changed
 
 - Segmented controls size to their number of buttons (the Today/Total switch no longer has an empty third slot).

@@ -264,6 +264,7 @@ export function Watchlist({
     return frame(
         <AccountPage
           email={email}
+          admin={admin}
           cols={cols}
           setCols={setCols}
           onToast={(text) => setToast({ text })}
