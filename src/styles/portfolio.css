@@ -118,3 +118,23 @@
 .apikey-label { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .apikey-fresh { display: grid; gap: 8px; justify-items: start; }
 .apikey-fresh .alrow { width: 100%; }
+
+/* Depotverlauf */
+.pf-hist { display: grid; gap: 8px; padding: 12px 14px; }
+.pf-hist-head { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; min-height: 36px; }
+.pf-hist-legend { flex: 1; display: flex; gap: 6px 14px; align-items: baseline; flex-wrap: wrap; min-width: 0; font-size: 0.85rem; text-align: left !important; }
+.pf-hist-legend .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; vertical-align: baseline; }
+.pf-hist-legend .dot.val { background: var(--accent); }
+.pf-hist-legend .dot.inv { background: none; border: 1px dashed var(--muted); }
+.pf-hist-gain { font-weight: 600; white-space: nowrap; font-size: 0.9rem; }
+.pf-hist-gain .small { margin: 0; font-weight: 500; }
+.pf-hist-ranges { grid-template-columns: repeat(4, minmax(40px, 1fr)); }
+.pf-hist-ranges button { min-height: 30px; padding: 0 8px; }
+/* Feste Höhe: beim Laden springt nichts */
+.pf-hist-box { position: relative; height: 220px; border-radius: 8px; overflow: hidden; }
+.pf-hist-box .chart { position: absolute; inset: 0; }
+@media (max-width: 767px) {
+  .pf-hist { padding: 10px 12px; }
+  .pf-hist-box { height: 180px; }
+  .pf-hist-ranges { width: 100%; }
+}

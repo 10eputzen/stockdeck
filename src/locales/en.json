@@ -339,7 +339,20 @@
     "tvUnknown": "Not found",
     "tvImporting": "Importing …",
     "tvImportCount_one": "Import {{count}} symbol",
-    "tvImportCount_other": "Import {{count}} symbols"
+    "tvImportCount_other": "Import {{count}} symbols",
+    "history": {
+      "title": "History",
+      "invested": "Invested",
+      "gainHint": "Gain in this period: change in value minus newly invested money",
+      "rangeAria": "History period",
+      "unavailable": "History is unavailable right now.",
+      "range": {
+        "1mo": "1M",
+        "6mo": "6M",
+        "1y": "1Y",
+        "max": "Max"
+      }
+    }
   },
   "detail": {
     "sectionLabel": "{{symbol}} Details",

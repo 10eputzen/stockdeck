@@ -85,6 +85,10 @@ export type ChartData = {
   prev_close: number | null
   more: boolean
   bars: Bar[]
+  /** Kurswährung laut Yahoo (ab neuerer Edge Function) */
+  currency?: string | null
+  /** Splits im Zeitraum (Unix-Sekunden, Faktor neu/alt), Kurse sind bereinigt */
+  splits?: { t: number; factor: number }[]
 }
 export type NewsItem = { time: string; headline: string; source: string; summary: string; url: string; image: string | null }
 

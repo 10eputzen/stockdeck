@@ -339,7 +339,20 @@
     "tvUnknown": "Nicht gefunden",
     "tvImporting": "Importiere …",
     "tvImportCount_one": "{{count}} Wert importieren",
-    "tvImportCount_other": "{{count}} Werte importieren"
+    "tvImportCount_other": "{{count}} Werte importieren",
+    "history": {
+      "title": "Verlauf",
+      "invested": "Einstand",
+      "gainHint": "Gewinn im Zeitraum: Wertänderung abzüglich neu investierten Geldes",
+      "rangeAria": "Zeitraum des Verlaufs",
+      "unavailable": "Verlauf gerade nicht verfügbar.",
+      "range": {
+        "1mo": "1M",
+        "6mo": "6M",
+        "1y": "1J",
+        "max": "Max"
+      }
+    }
   },
   "detail": {
     "sectionLabel": "{{symbol}} Details",
