@@ -352,6 +352,24 @@
         "1y": "1Y",
         "max": "Max"
       }
+    },
+    "analysis": {
+      "allocation": "Allocation",
+      "groupBy": "Group by",
+      "by": {
+        "position": "Holdings",
+        "depot": "Depots",
+        "currency": "Currency"
+      },
+      "other": "Other",
+      "noValue": "No valued positions yet.",
+      "dividends": "Dividends",
+      "last12m": "Last 12 months",
+      "thisYear": "This year",
+      "perYear": "Dividends per year",
+      "payments_one": "{{count}} payment",
+      "payments_other": "{{count}} payments",
+      "noDividends": "No dividends recorded yet."
     }
   },
   "detail": {

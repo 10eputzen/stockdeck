@@ -138,3 +138,37 @@
   .pf-hist-box { height: 180px; }
   .pf-hist-ranges { width: 100%; }
 }
+
+/* Auswertung: Aufteilung und Dividenden */
+.pf-analysis { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px; }
+.pf-analysis .mcard { padding: 12px 14px; display: grid; gap: 10px; align-content: start; }
+.pf-an-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 36px; }
+.pf-an-head h2 { margin: 0 auto 0 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+.seg.small-seg { margin: 0; }
+.seg.small-seg button { min-height: 30px; padding: 0 10px; font-size: 0.72rem; }
+.pf-alloc-body { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 16px; align-items: center; }
+.pf-donut { width: 140px; height: 140px; }
+.pf-donut circle { fill: none; stroke-width: 18; }
+.pf-donut .pf-donut-track { stroke: var(--border); }
+.pf-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; min-width: 0; }
+.pf-legend-row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto minmax(64px, auto); gap: 8px; align-items: center; width: 100%; min-height: 26px; padding: 2px 4px; border: 0; background: none; color: inherit; font: inherit; text-align: left; border-radius: 6px; }
+button.pf-legend-row { cursor: pointer; }
+button.pf-legend-row:hover { background: var(--hover); }
+.pf-legend .sw { width: 10px; height: 10px; border-radius: 3px; }
+.pf-legend .lab { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.pf-legend .lab .muted { font-weight: 400; }
+.pf-legend .num { text-align: right; }
+.pf-div-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.pf-div-kpis > div { display: grid; gap: 2px; }
+.pf-div-kpis .lbl { font-size: 0.75rem; color: var(--muted); }
+.pf-div-kpis .num { text-align: left !important; font-weight: 600; }
+.pf-div-kpis .big { font-size: 1.25rem; }
+.pf-bars { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; height: 130px; align-items: end; }
+.pf-bar { display: grid; grid-template-rows: auto 1fr auto; justify-items: center; gap: 4px; height: 100%; min-width: 0; }
+.pf-bar .num { white-space: nowrap; overflow: hidden; max-width: 100%; text-overflow: ellipsis; }
+.pf-bar-fill { align-self: end; width: 100%; max-width: 44px; background: var(--accent); border-radius: 4px 4px 0 0; opacity: 0.85; }
+@media (max-width: 767px) {
+  .pf-analysis { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .pf-alloc-body { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  .pf-legend { width: 100%; }
+}
