@@ -17,6 +17,7 @@ import { EarningsText, MetricsView } from './detail/Metrics'
 import { SignalsView } from './detail/Signals'
 import { PriceChart } from './detail/Chart'
 import { News } from './detail/News'
+import { Notes } from './detail/Notes'
 
 const isUs = (s: string) => /^[A-Z]{1,6}(\.[AB])?$/.test(s)
 
@@ -41,7 +42,7 @@ export function Detail({
   const [ownP, setP] = useState<Profile>()
   const q = quote ?? ownQ
   const p = profile ?? ownP
-  const [tab, setTab] = useState<'chart' | 'news' | 'kennzahlen' | 'signale' | 'position'>('chart')
+  const [tab, setTab] = useState<'chart' | 'news' | 'kennzahlen' | 'signale' | 'position' | 'notizen'>('chart')
   const [ev, setEv] = useState<EarningsEvent | null>()
   const [alertOpen, setAlertOpen] = useState(false)
 
@@ -153,6 +154,9 @@ export function Detail({
         <button role="tab" aria-selected={tab === 'position'} className={tab === 'position' ? 'active' : ''} onClick={() => setTab('position')}>
           {t('detail.tabPosition')}
         </button>
+        <button role="tab" aria-selected={tab === 'notizen'} className={tab === 'notizen' ? 'active' : ''} onClick={() => setTab('notizen')}>
+          {t('detail.tabNotes')}
+        </button>
       </div>
 
       {tab === 'chart' && <PriceChart key={symbol} symbol={symbol} currency={q?.currency} />}
@@ -160,6 +164,7 @@ export function Detail({
       {tab === 'kennzahlen' && <MetricsView symbol={symbol} price={q?.price} />}
       {tab === 'signale' && <SignalsView symbol={symbol} quote={q} />}
       {tab === 'position' && <PositionTab symbol={symbol} quote={q} />}
+      {tab === 'notizen' && <Notes key={symbol} symbol={symbol} />}
     </section>
   )
 }

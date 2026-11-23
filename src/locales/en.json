@@ -507,7 +507,8 @@
     "byUser": "by {{user}}",
     "draggableItem": "draggable item",
     "addedByUser": "added by {{user}}",
-    "removeSymbol": "Remove {{symbol}}"
+    "removeSymbol": "Remove {{symbol}}",
+    "tabNotes": "Notes"
   },
   "apiKeys": {
     "section": "AI access (MCP)",
@@ -582,5 +583,14 @@
     "addHint": "Add to watchlist (Shift+Enter)",
     "nothing": "Nothing found",
     "keys": "↑↓ select · Enter open · Shift+Enter add to watchlist · Esc close"
+  },
+  "notes": {
+    "placeholder": "Why this stock? Thesis, reasons to buy, price targets, what to watch …",
+    "label": "Note on {{symbol}}",
+    "saving": "Saving …",
+    "savedAt": "Saved {{time}}",
+    "private": "Only visible to you, saves automatically.",
+    "error": "Saving failed, please type again.",
+    "mcpHint": "Also available via MCP (get_notes, set_note)."
   }
 }

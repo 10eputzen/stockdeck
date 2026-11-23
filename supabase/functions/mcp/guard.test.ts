@@ -92,8 +92,8 @@ describe('rate limit', () => {
 // API-Key-Aufrufe laufen mit dem Service-Role-Schlüssel ohne RLS: jede Abfrage einer Nutzertabelle
 // muss deshalb selbst nach user_id filtern (oder sie beim Schreiben setzen).
 describe('user scoping', () => {
-  const USER_TABLES = ['watchlist_items', 'watchlist_groups', 'transactions', 'portfolios', 'alert_rules', 'api_keys', 'push_subscriptions']
-  for (const file of ['index.ts', 'portfolio.ts', '../_shared/portfolio.ts']) {
+  const USER_TABLES = ['watchlist_items', 'watchlist_groups', 'transactions', 'portfolios', 'alert_rules', 'api_keys', 'push_subscriptions', 'stock_notes']
+  for (const file of ['index.ts', 'portfolio.ts', 'notes.ts', '../_shared/portfolio.ts']) {
     it(`every user-table query in ${file} is scoped to the user`, () => {
       const src = readFileSync(new URL(file, import.meta.url), 'utf8')
       const found: string[] = []
@@ -108,4 +108,12 @@ describe('user scoping', () => {
       expect(found.length).toBeGreaterThan(0)
     })
   }
+})
+
+describe('Notizen', () => {
+  it('append hängt mit Datum an', async () => {
+    const { appendNote } = await import('./noteText.ts')
+    expect(appendNote(null, ' Kauf ', '2026-11-22')).toBe('2026-11-22: Kauf')
+    expect(appendNote('Alt\n', 'Neu', '2026-11-23')).toBe('Alt\n\n2026-11-23: Neu')
+  })
 })

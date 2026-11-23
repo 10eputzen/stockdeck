@@ -60,3 +60,8 @@
 .nhead { font-weight: 600; line-height: 1.3; }
 .nsum { font-size: 0.85rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .newsitem:hover .nhead { color: var(--accent); }
+
+/* Notizen */
+.notes { display: grid; gap: 6px; }
+.notes-text { width: 100%; min-height: 260px; resize: vertical; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; line-height: 1.5; }
+.notes-foot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

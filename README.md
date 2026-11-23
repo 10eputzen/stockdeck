@@ -17,7 +17,7 @@ The UI is available in English and German (browser language by default, switchab
 ## Features
 
 - Watchlist with groups, drag & drop, configurable and resizable columns
-- Detail view per stock: chart, key metrics, news, analyst consensus, price target, insider trades, earnings, short interest, technicals
+- Detail view per stock: chart, key metrics, news, analyst consensus, price target, insider trades, earnings, short interest, technicals, and your own notes
 - Portfolios with transactions, CSV import (Parqet export or a simple format), valuation in EUR
 - Local bank connectors (Trade Republic first) that upload your own transactions into your instance, personal use only
 - Web push alerts: price above/below, daily move, take-profit and stop rules
@@ -67,7 +67,7 @@ flowchart LR
 
 ### MCP server: your watchlist as an AI tool
 
-`supabase/functions/mcp/` implements the [Model Context Protocol](https://modelcontextprotocol.io) (Streamable HTTP, stateless) with 13 tools: read and edit the watchlist and groups, search symbols, get quotes, charts, news and signals, list the portfolio and record transactions.
+`supabase/functions/mcp/` implements the [Model Context Protocol](https://modelcontextprotocol.io) (Streamable HTTP, stateless) with 15 tools: read and edit the watchlist and groups, search symbols, get quotes, charts, news and signals, list the portfolio, record transactions, and read or write your notes per stock.
 
 - **Auth:** OAuth 2.1 with dynamic client registration (Supabase Auth acts as the authorization server, the app hosts the consent page), so claude.ai can connect with just the URL. Scripts and Claude Code can use an API key instead; only its SHA-256 hash is stored.
 - **Only your own data:** the caller is resolved to a user id up front, and every query is filtered by it. Accounts not on the allowlist are rejected.

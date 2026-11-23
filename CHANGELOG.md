@@ -19,6 +19,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - Command palette: Ctrl+K / Cmd+K (or `/`) opens a quick switcher on desktop. Type to jump to a stock in your watchlist, find new stocks and open them (Shift+Enter adds them to the watchlist), go to Watchlist/Portfolio/Account, create a group, import, or switch light/dark. Fully keyboard-driven; a "Search & commands" button in the tab bar opens it too.
 
+- Notes per stock: a "Notes" tab on the detail page for your thesis, reasons to buy and what to watch. Saves while you type, private per user (new table `stock_notes` with Row Level Security). The MCP server gets `get_notes` and `set_note` (replace or append with date), so an assistant can keep your notes up to date. Needs the new migration and a redeploy of the `mcp` function.
+
 ### Changed
 
 - Segmented controls size to their number of buttons (the Today/Total switch no longer has an empty third slot).
