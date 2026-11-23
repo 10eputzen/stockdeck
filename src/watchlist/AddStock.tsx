@@ -4,6 +4,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { isCrypto } from "../lib/symbols";
 import {
   searchSymbols,
   type SearchResult,
@@ -61,7 +62,7 @@ export function AddStock({
                 }}
               >
                 <span className="sym">{r.symbol}</span>
-                <span className="muted ellipsis">{r.name}</span>
+                <span className="muted ellipsis">{isCrypto(r.symbol) ? `${r.name} · ${t("common.crypto")}` : r.name}</span>
                 {existing.includes(r.symbol) && (
                   <span className="muted small inlist">{t("watchlist.inList")}</span>
                 )}

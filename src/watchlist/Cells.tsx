@@ -4,7 +4,7 @@ import { LOCALE, t } from '../i18n'
 import { type Columns, type OrderKey } from '../lib/columns'
 import type { Quote } from '../lib/supabase'
 import type { Signal } from '../lib/signals'
-import { dirOf, money, moneySigned, pct, time } from '../lib/format'
+import { dirOf, pct, price, priceSigned, time } from '../lib/format'
 import { ExtIcon, SignalBadge } from '../ui/Badges'
 import { Logo } from '../ui/Logo'
 import { Sk } from '../ui/Skeleton'
@@ -60,14 +60,14 @@ export function Cells({
     ),
     price: cols.price && (
       <span className="cell num" data-testid="price">
-        {q ? money(q.currency).format(q.price) : <Sk w={72} />}
+        {q ? price(q.currency).format(q.price) : <Sk w={72} />}
         {cols.ext && q?.ext_session && q.ext_price != null && (
           <span
             className={`ext ${dirOf(q.ext_change_pct)}`}
             data-testid="ext"
             title={q.ext_time ? time.format(new Date(q.ext_time)) : undefined}
           >
-            <ExtIcon session={q.ext_session} />{money(q.currency).format(q.ext_price)}
+            <ExtIcon session={q.ext_session} />{price(q.currency).format(q.ext_price)}
             {q.ext_change_pct != null && ` ${pct.format(q.ext_change_pct / 100)}`}
           </span>
         )}
@@ -75,7 +75,7 @@ export function Cells({
     ),
     chg_abs: cols.chg_abs && (
       <span className={`cell num hide-sm ${dirOf(q?.change)}`}>
-        {q ? moneySigned(q.currency).format(q.change) : <Sk w={56} />}
+        {q ? priceSigned(q.currency).format(q.change) : <Sk w={56} />}
       </span>
     ),
     chg_pct: cols.chg_pct && (
@@ -137,11 +137,11 @@ export function MobileCells({
         </span>
       </span>
       <span className="mright num">
-        {cols.price && <span className="mprice">{q ? money(q.currency).format(q.price) : <Sk w={64} />}</span>}
+        {cols.price && <span className="mprice">{q ? price(q.currency).format(q.price) : <Sk w={64} />}</span>}
         {showPill &&
           (q ? (
             <span className={`pill ${dirOf(q.change)}`}>
-              {cols.chg_abs && moneySigned(q.currency).format(q.change)}
+              {cols.chg_abs && priceSigned(q.currency).format(q.change)}
               {cols.chg_abs && cols.chg_pct && ' · '}
               {cols.chg_pct && pct.format(q.change_pct / 100)}
             </span>
@@ -150,7 +150,7 @@ export function MobileCells({
           ))}
         {cols.ext && q?.ext_session && q.ext_price != null && (
           <span className={`ext ${dirOf(q.ext_change_pct)}`}>
-            <ExtIcon session={q.ext_session} />{money(q.currency).format(q.ext_price)}
+            <ExtIcon session={q.ext_session} />{price(q.currency).format(q.ext_price)}
           </span>
         )}
       </span>

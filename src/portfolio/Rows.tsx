@@ -1,7 +1,7 @@
 import type React from 'react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { eur, eurSigned, money, pct } from '../lib/format'
+import { eur, eurSigned, pct, price } from '../lib/format'
 import type { Position, Totals } from '../lib/supabase'
 import { Logo } from '../ui/Logo'
 import { Sk } from '../ui/Skeleton'
@@ -152,7 +152,7 @@ export function PosRow({
       </span>
       <span className="cell num">{r ? qty.format(r.quantity) : <Sk w={40} />}</span>
       <span className="cell num">{r ? eur.format(avg ?? 0) : <Sk w={60} />}</span>
-      <span className="cell num">{r ? (r.price == null ? '–' : money(r.currency).format(r.price)) : <Sk w={60} />}</span>
+      <span className="cell num">{r ? (r.price == null ? '–' : price(r.currency).format(r.price)) : <Sk w={60} />}</span>
       <span className="cell num">{r ? (r.value == null ? '–' : eur.format(r.value)) : <Sk w={70} />}</span>
       <span className={`cell num ${dirOf(r && change(r, mode).abs)}`}>
         {r ? (

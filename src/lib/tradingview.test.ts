@@ -19,10 +19,16 @@ describe('parseTradingView', () => {
     ])
   })
 
-  it('überspringt Duplikate und meldet Nicht-US-Börsen und Krypto', () => {
-    const r = parseTradingView('NASDAQ:NVDA,XETR:SAP,BINANCE:BTCUSDT,NASDAQ:NVDA,NYSE:BRK.B')
+  it('überspringt Duplikate und meldet Nicht-US-Börsen', () => {
+    const r = parseTradingView('NASDAQ:NVDA,XETR:SAP,NASDAQ:NVDA,NYSE:BRK.B')
     expect(r.groups).toEqual([{ name: null, symbols: ['NVDA', 'BRK.B'] }])
-    expect(r.unsupported.map((u) => u.raw)).toEqual(['XETR:SAP', 'BINANCE:BTCUSDT'])
+    expect(r.unsupported.map((u) => u.raw)).toEqual(['XETR:SAP'])
+  })
+
+  it('übernimmt Kryptopaare als Yahoo-Paare, Coin-gegen-Coin nicht', () => {
+    const r = parseTradingView('BINANCE:BTCUSDT,COINBASE:BTCUSD,KRAKEN:ETHEUR,BINANCE:ETHBTC')
+    expect(r.groups).toEqual([{ name: null, symbols: ['BTC-USD', 'ETH-EUR'] }])
+    expect(r.unsupported.map((u) => u.raw)).toEqual(['BINANCE:ETHBTC'])
   })
 
   it('verträgt Zeilenumbrüche, Leerzeichen, BOM und leere Abschnitte', () => {

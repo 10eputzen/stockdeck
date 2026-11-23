@@ -16,6 +16,8 @@ import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { getProfiles, getQuotes, searchSymbols, SYMBOL_RE } from "../_shared/finnhub.ts";
 import { getChart, getNewsPage, isRange } from "../_shared/history.ts";
 import { getSignals } from "../_shared/signals.ts";
+import { cryptoName, isCryptoSymbol } from "../_shared/crypto.ts";
+import { yahooQuote } from "../_shared/yahoo.ts";
 import { callPortfolioTool, PORTFOLIO_TOOLS, PortfolioError } from "./portfolio.ts";
 import { callNoteTool, NOTE_TOOL_NAMES, NOTE_TOOLS, NoteError } from "./notes.ts";
 import {
@@ -223,9 +225,14 @@ async function callTool(db: SupabaseClient, admin: SupabaseClient, userId: strin
     case "add_stock": {
       const symbol = normSymbol(args.symbol);
       const matches = await searchSymbols(symbol);
-      const hit = matches.find((m) => m.symbol === symbol);
+      let hit = matches.find((m) => m.symbol === symbol);
+      // Kryptopaare in anderer Währung (BTC-USD) zeigt die Suche nicht immer; dann reicht ein Kurs
+      if (!hit && isCryptoSymbol(symbol)) {
+        const y = await yahooQuote(symbol).catch(() => null);
+        if (y) hit = { symbol, name: y.name ? cryptoName(y.name) : symbol };
+      }
       if (!hit) {
-        return { added: false, reason: `Ticker ${symbol} an US-Börsen nicht gefunden.`, suggestions: matches };
+        return { added: false, reason: `Ticker ${symbol} nicht gefunden.`, suggestions: matches };
       }
       const profile = (await getProfiles(admin, [symbol]))[0];
       const name =
@@ -325,7 +332,7 @@ async function handle(msg: JsonRpcRequest, db: SupabaseClient, admin: SupabaseCl
         capabilities: { tools: { listChanged: false } },
         serverInfo: SERVER,
         instructions:
-          `Watchlist der App stockdeck${SITE_URL ? ` (${SITE_URL})` : ""}. Nur US-Ticker. Kurse in USD von Finnhub.`,
+          `Watchlist der App stockdeck${SITE_URL ? ` (${SITE_URL})` : ""}. US-Ticker (AAPL), andere Börsen in Yahoo-Schreibweise (SAP.DE) und Kryptowerte als Paar (BTC-EUR). Kurse in der Währung des Werts (US-Werte USD von Finnhub, sonst Yahoo).`,
       });
     }
     case "ping":

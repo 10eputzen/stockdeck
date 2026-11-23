@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { rank, type Entry } from "../lib/palette";
 import { searchSymbols, type SearchResult } from "../lib/supabase";
+import { isCrypto } from "../lib/symbols";
 import type { Route } from "../lib/nav";
 import { resolveTheme, setThemePref } from "../lib/theme";
 
@@ -82,7 +83,7 @@ export function CommandPalette({
             id: `s:${r.symbol}`,
             group: "search",
             label: r.symbol,
-            detail: r.name,
+            detail: isCrypto(r.symbol) ? `${r.name} · ${t("common.crypto")}` : r.name,
             run: done(() => onOpen(r.symbol)),
             alt: done(() => onAdd(r)),
           }))

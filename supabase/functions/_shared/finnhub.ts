@@ -2,6 +2,7 @@
 // Der API-Key bleibt serverseitig (Supabase-Secret FINNHUB_API_KEY).
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { isUsSymbol, yahooFetch, yahooQuote, yahooSearch, yahooSymbol } from "./yahoo.ts";
+import { coinProfile, cryptoHits, cryptoName, isCryptoSymbol } from "./crypto.ts";
 
 const FINNHUB = "https://finnhub.io/api/v1";
 const CACHE_SECONDS = 60;
@@ -54,10 +55,13 @@ export async function searchSymbols(query: string): Promise<SearchResult[]> {
   ]);
   // Yahoo liefert US-Werte ohne Endung; die kommen schon von Finnhub
   const extra = yahoo
-    .filter((y) => !isUsSymbol(y.symbol) && SYMBOL_RE.test(y.symbol))
+    .filter((y) => y.type !== "CRYPTOCURRENCY" && !isUsSymbol(y.symbol) && SYMBOL_RE.test(y.symbol))
     .map((y) => ({ symbol: y.symbol, name: y.exchange ? `${y.name} · ${y.exchange}` : y.name }));
+  const crypto = (await cryptoHits(yahoo)).filter((c) => SYMBOL_RE.test(c.symbol));
+  // Sucht jemand nach einem Coin („btc“, „solana“), stehen die Kryptopaare oben, sonst unter den Aktien
+  const coinFirst = yahoo[0]?.type === "CRYPTOCURRENCY";
   const seen = new Set<string>();
-  return [...us.slice(0, 7), ...extra]
+  return (coinFirst ? [...crypto, ...us.slice(0, 7), ...extra] : [...us.slice(0, 7), ...crypto, ...extra])
     .filter((r) => !seen.has(r.symbol) && seen.add(r.symbol))
     .slice(0, 12);
 }
@@ -127,6 +131,11 @@ async function profilesChunk(admin: SupabaseClient, symbols: string[]): Promise<
   const fetched = await Promise.all(
     missing.map(async (symbol): Promise<Profile | null> => {
       try {
+        if (isCryptoSymbol(symbol)) {
+          const [coin, y] = await Promise.all([coinProfile(symbol).catch(() => null), yahooQuote(symbol).catch(() => null)]);
+          const name = coin?.name ?? (y?.name ? cryptoName(y.name) : null);
+          return { symbol, name, logo_url: coin?.logo ?? null, fetched_at: new Date().toISOString() };
+        }
         if (!isUsSymbol(symbol)) {
           const y = await yahooQuote(symbol);
           return { symbol, name: y?.name ?? null, logo_url: null, fetched_at: new Date().toISOString() };

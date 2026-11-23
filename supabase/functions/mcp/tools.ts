@@ -5,14 +5,14 @@ export const TOOLS = [
   {
     name: "list_watchlist",
     description:
-      "Listet alle Aktien auf der Watchlist (in Anzeigereihenfolge, mit Gruppe) mit aktuellem Kurs (USD, Finnhub, max. 60 s alt), Tagesveränderung, ggf. vor-/nachbörslichem Kurs (extended) und Datum der Aufnahme.",
+      "Listet alle Aktien auf der Watchlist (in Anzeigereihenfolge, mit Gruppe) mit aktuellem Kurs (in der Währung des Werts, max. 60 s alt), Tagesveränderung, ggf. vor-/nachbörslichem Kurs (extended) und Datum der Aufnahme.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     annotations: { title: "Watchlist anzeigen", readOnlyHint: true },
   },
   {
     name: "search_stock",
     description:
-      "Sucht US-Aktien und ADRs nach Name oder Ticker (z. B. 'nvidia', 'SAP'). Liefert Ticker und Firmenname. Vor add_stock nutzen, wenn der Ticker unklar ist.",
+      "Sucht Aktien, ETFs und Kryptowerte nach Name oder Ticker (z. B. 'nvidia', 'SAP', 'bitcoin'). Liefert Ticker und Name; Krypto kommt als Euro-Paar (BTC-EUR). Vor add_stock nutzen, wenn der Ticker unklar ist.",
     inputSchema: {
       type: "object",
       properties: { query: { type: "string", description: "Firmenname oder Ticker" } },
@@ -24,7 +24,7 @@ export const TOOLS = [
   {
     name: "add_stock",
     description:
-      "Fügt eine Aktie per Ticker zur Watchlist hinzu (nur US-Börsen, z. B. 'NVDA', 'SAP' als ADR). Der Ticker wird gegen Finnhub geprüft; ist er unbekannt, kommen Vorschläge zurück. Bereits vorhandene Ticker werden nicht doppelt angelegt.",
+      "Fügt eine Aktie per Ticker zur Watchlist hinzu (z. B. 'NVDA', 'SAP.DE', 'BTC-EUR'). Der Ticker wird gegen die Suche geprüft; ist er unbekannt, kommen Vorschläge zurück. Bereits vorhandene Ticker werden nicht doppelt angelegt.",
     inputSchema: {
       type: "object",
       properties: {
@@ -72,7 +72,7 @@ export const TOOLS = [
   },
   {
     name: "get_quotes",
-    description: "Aktuelle Kurse (USD) für bis zu 50 Ticker, auch wenn sie nicht auf der Watchlist stehen.",
+    description: "Aktuelle Kurse (in der Währung des Werts, Feld currency) für bis zu 50 Ticker, auch wenn sie nicht auf der Watchlist stehen.",
     inputSchema: {
       type: "object",
       properties: {

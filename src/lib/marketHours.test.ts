@@ -20,4 +20,8 @@ describe('marketActive', () => {
     expect(quoteInterval(new Date('2026-11-16T15:00:00Z'))).toBe(30_000)
     expect(quoteInterval(new Date('2026-11-14T15:00:00Z'))).toBe(900_000)
   })
+  it('fragt mit Kryptowerten auch am Wochenende jede Minute', () => {
+    expect(quoteInterval(new Date('2026-11-14T15:00:00Z'), true)).toBe(60_000)
+    expect(quoteInterval(new Date('2026-11-16T15:00:00Z'), true)).toBe(30_000)
+  })
 })

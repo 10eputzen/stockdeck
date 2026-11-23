@@ -3,6 +3,7 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { getQuotes } from "./finnhub.ts";
 import { holdings, sum, valuate, type FxRates, type Tx } from "./positions.ts";
 import { figiBatch, resolveIsin } from "./yahoo.ts";
+import { cryptoFromIsin } from "./crypto.ts";
 
 export const ISIN_RE = /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/;
 
@@ -41,7 +42,7 @@ export async function resolveIsins(admin: SupabaseClient, input: unknown[]) {
   for (let i = 0; i < missing.length; i += 10) {
     const chunk = missing.slice(i, i + 10);
     const figi = await figiBatch(chunk).catch(() => null);
-    const found = await Promise.all(chunk.map((isin) => resolveIsin(isin, figi?.get(isin) ?? []).catch(() => null)));
+    const found = await Promise.all(chunk.map(async (isin) => (await cryptoFromIsin(isin)) ?? (await resolveIsin(isin, figi?.get(isin) ?? []).catch(() => null))));
     chunk.forEach((isin, j) => {
       const r = { isin, symbol: found[j]?.symbol ?? null, name: found[j]?.name ?? null };
       if (r.symbol || figi) rows.push({ ...r, fetched_at: new Date().toISOString() });

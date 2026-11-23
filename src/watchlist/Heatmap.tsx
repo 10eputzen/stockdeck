@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { LOCALE } from "../i18n";
-import { money } from "../lib/format";
+import { price } from "../lib/format";
 import type { Quote } from "../lib/supabase";
 import { breadth, heatLevel } from "./heat";
 
@@ -40,7 +40,7 @@ export function Heatmap({ sections, quotes, onOpen }: { sections: HeatSection[];
                   >
                     <span className="heat-sym">{i.symbol}</span>
                     <span className="heat-pct num">{q ? `${pctFmt.format(q.change_pct)} %` : "–"}</span>
-                    <span className="heat-price num">{q ? money(q.currency).format(q.price) : ""}</span>
+                    <span className="heat-price num">{q ? price(q.currency).format(q.price) : ""}</span>
                   </button>
                 );
               })}

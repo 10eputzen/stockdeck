@@ -16,5 +16,11 @@ export function marketActive(now: Date = new Date()): boolean {
   return hour >= 3 && hour < 20
 }
 
-/** Abstand der Kurs-Updates: im Handel 30 s (Server erneuert im Hintergrund), sonst 15 min. */
-export const quoteInterval = (now: Date = new Date()) => (marketActive(now) ? 30_000 : 15 * 60_000)
+export const FULL_REFRESH_MS = 15 * 60_000
+
+/**
+ * Abstand der Kurs-Updates: im Handel 30 s (Server erneuert im Hintergrund), sonst 15 min;
+ * mit Kryptowerten auf der Liste außerhalb der Börsenzeiten jede Minute (Krypto handelt rund um die Uhr).
+ */
+export const quoteInterval = (now: Date = new Date(), crypto = false) =>
+  marketActive(now) ? 30_000 : crypto ? 60_000 : FULL_REFRESH_MS

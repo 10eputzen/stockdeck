@@ -16,6 +16,27 @@ const US_EXCHANGES = new Set([
   'OTC',
 ])
 
+/** Krypto-Börsen bei TradingView; deren Paare (BTCUSDT, ETHEUR) werden zu Yahoo-Paaren (BTC-USD, ETH-EUR). */
+const CRYPTO_EXCHANGES = new Set([
+  'BINANCE',
+  'COINBASE',
+  'KRAKEN',
+  'BITSTAMP',
+  'BITFINEX',
+  'BYBIT',
+  'OKX',
+  'KUCOIN',
+  'GEMINI',
+  'BITPANDA',
+  'CRYPTO',
+])
+
+/** BTCUSDT → BTC-USD, ETHEUR → ETH-EUR; Paare gegen andere Coins (ETHBTC) gibt es nicht. */
+function cryptoPair(pair: string): string | null {
+  const m = /^([A-Z0-9]{2,10}?)(USDT|USDC|USD|EUR)$/.exec(pair)
+  return m ? `${m[1]}-${m[2] === 'EUR' ? 'EUR' : 'USD'}` : null
+}
+
 const SYMBOL_RE = /^[A-Z0-9.-]{1,20}$/
 
 export type ParsedGroup = { name: string | null; symbols: string[] }
@@ -49,6 +70,14 @@ export function parseTradingView(text: string): ParsedWatchlist {
     const exchange = prefix?.toUpperCase() ?? null
     const symbol = (rest ?? '').trim().toUpperCase()
 
+    const coin = exchange && CRYPTO_EXCHANGES.has(exchange) ? cryptoPair(symbol) : null
+    if (coin) {
+      if (!seen.has(coin)) {
+        seen.add(coin)
+        current.symbols.push(coin)
+      }
+      continue
+    }
     if (exchange && !US_EXCHANGES.has(exchange)) {
       unsupported.push({ raw: token, reason: t('common.tvUnsupportedExchange', { exchange }) })
       continue

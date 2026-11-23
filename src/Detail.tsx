@@ -2,7 +2,7 @@ import { AlertDialog } from './Alerts'
 import { PositionTab } from './portfolio/PositionTab'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { money, moneySigned, pct } from './lib/format'
+import { pct, price, priceSigned } from './lib/format'
 import {
   fetchEvents,
   fetchProfiles,
@@ -12,6 +12,7 @@ import {
   type Quote,
 } from './lib/supabase'
 import { Logo } from './ui/Logo'
+import { isUs } from './lib/symbols'
 import { dirOf } from './lib/format'
 import { EarningsText, MetricsView } from './detail/Metrics'
 import { SignalsView } from './detail/Signals'
@@ -19,7 +20,6 @@ import { PriceChart } from './detail/Chart'
 import { News } from './detail/News'
 import { Notes } from './detail/Notes'
 
-const isUs = (s: string) => /^[A-Z]{1,6}(\.[AB])?$/.test(s)
 
 /** Detailseite eines Werts: Kopf mit Kurs, darunter Chart und News als Unterreiter. */
 export function Detail({
@@ -102,10 +102,10 @@ export function Detail({
         {alertOpen && <AlertDialog symbol={symbol} price={q?.price ?? null} currency={q?.currency ?? null} onClose={() => setAlertOpen(false)} />}
       </div>
       <div className="dprice">
-        <span className="big num">{q ? money(q.currency).format(q.price) : <span className="sk sk-text" style={{ width: 120 }} />}</span>
+        <span className="big num">{q ? price(q.currency).format(q.price) : <span className="sk sk-text" style={{ width: 120 }} />}</span>
         {q ? (
           <span className={`pill ${dirOf(q.change)}`}>
-            {moneySigned(q.currency).format(q.change)} · {pct.format(q.change_pct / 100)}
+            {priceSigned(q.currency).format(q.change)} · {pct.format(q.change_pct / 100)}
           </span>
         ) : (
           <span className="sk sk-text" style={{ width: 110 }} />
@@ -113,7 +113,7 @@ export function Detail({
         <span className="muted small ext-line">
           {q?.ext_session && q.ext_price != null && q.ext_change_pct != null ? (
             <>
-              {q.ext_session === 'pre' ? t('detail.preMarket') : t('detail.afterHours')} {money(q.currency).format(q.ext_price)}{' '}
+              {q.ext_session === 'pre' ? t('detail.preMarket') : t('detail.afterHours')} {price(q.currency).format(q.ext_price)}{' '}
               <span className={`extchg ${dirOf(q.ext_change_pct)}`}>({pct.format(q.ext_change_pct / 100)})</span>
             </>
           ) : (

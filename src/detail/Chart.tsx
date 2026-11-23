@@ -17,7 +17,7 @@ import {
 } from 'lightweight-charts'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { money, pct } from '../lib/format'
+import { pct, price } from '../lib/format'
 import {
   fetchChart,
   type Bar,
@@ -77,6 +77,12 @@ function paintSeries(s: Series, d: ChartData): number | null {
   const last = d.bars[d.bars.length - 1]?.c
   const up = base != null && last != null ? last >= base : true
   const col = up ? c.up : c.down
+  // Kleine Kurse (Kryptowerte unter 1) brauchen mehr Nachkommastellen, sonst wird die Skala flach
+  const low = Math.min(...d.bars.map((b) => b.l).filter((v) => v > 0), Infinity)
+  const precision = low < 1 ? Math.min(8, Math.max(2, 3 - Math.floor(Math.log10(low)))) : 2
+  const priceFormat = { type: 'price' as const, precision, minMove: 10 ** -precision }
+  s.candles.applyOptions({ priceFormat })
+  s.line.applyOptions({ priceFormat })
   s.candles.setData(d.bars.map((b) => ({ time: shift(b.t), open: b.o, high: b.h, low: b.l, close: b.c })))
   s.line.setData(d.bars.map((b) => ({ time: shift(b.t), value: b.c })))
   s.line.applyOptions({ lineColor: col, topColor: alpha(col, 0.28), bottomColor: alpha(col, 0) })
@@ -136,7 +142,7 @@ export function PriceChart({ symbol, currency }: { symbol: string; currency?: st
       timeScale: { borderVisible: false, rightOffset: 2, tickMarkFormatter: tickLabel },
       crosshair: { mode: CrosshairMode.Magnet },
       handleScroll: { vertTouchDrag: false },
-      localization: { locale: LOCALE, priceFormatter: (n: number) => money(curRef.current).format(n) },
+      localization: { locale: LOCALE, priceFormatter: (n: number) => price(curRef.current).format(n) },
     })
     candles.current = api.addSeries(CandlestickSeries, {
       upColor: c.up,
@@ -270,7 +276,7 @@ export function PriceChart({ symbol, currency }: { symbol: string; currency?: st
                   })}
                 </>
               ) : (
-                money(currency).format(legend.c)
+                price(currency).format(legend.c)
               )}{' '}
               <span className="muted">{t('detail.volumeShort', { v: compact.format(legend.v) })}</span>
             </>

@@ -1,6 +1,7 @@
 // Kursverlauf (Yahoo, inoffiziell, nur privat) und Firmen-News (Finnhub) mit kurzem In-Memory-Cache.
 // Der Cache lebt pro Function-Instanz; das reicht, um Zeitraum-Wechsel und Mehrfachaufrufe abzufangen.
 import { yahooSymbol } from "./yahoo.ts";
+import { coinProfile, cryptoBase, isCryptoSymbol } from "./crypto.ts";
 
 export const RANGES = ["1d", "5d", "1mo", "6mo", "ytd", "1y", "5y", "max"] as const;
 export type Range = (typeof RANGES)[number];
@@ -277,13 +278,18 @@ export async function getNews(symbol: string, days = 7): Promise<NewsItem[]> {
   return cached(`news|${symbol}|${days}`, 900, async () => {
     const to = new Date();
     const from = new Date(to.getTime() - days * 86400000);
-    const url = new URL("https://finnhub.io/api/v1/company-news");
-    url.searchParams.set("symbol", symbol);
-    url.searchParams.set("from", from.toISOString().slice(0, 10));
-    url.searchParams.set("to", to.toISOString().slice(0, 10));
+    const crypto = isCryptoSymbol(symbol);
+    // Für Kryptowerte gibt es keine Firmen-News, dafür Finnhubs allgemeine Krypto-Meldungen
+    const url = new URL(crypto ? "https://finnhub.io/api/v1/news" : "https://finnhub.io/api/v1/company-news");
+    if (crypto) url.searchParams.set("category", "crypto");
+    else {
+      url.searchParams.set("symbol", symbol);
+      url.searchParams.set("from", from.toISOString().slice(0, 10));
+      url.searchParams.set("to", to.toISOString().slice(0, 10));
+    }
     const res = await fetch(url, { headers: { "X-Finnhub-Token": Deno.env.get("FINNHUB_API_KEY") ?? "" } });
     if (!res.ok) throw new Error(`Finnhub news ${res.status}`);
-    const data = (await res.json()) as {
+    let data = (await res.json()) as {
       datetime: number;
       headline: string;
       source: string;
@@ -291,6 +297,7 @@ export async function getNews(symbol: string, days = 7): Promise<NewsItem[]> {
       url: string;
       image: string;
     }[];
+    if (crypto && Array.isArray(data)) data = await aboutCoin(symbol, data);
     const https = (u: string) => (typeof u === "string" && u.startsWith("https://") ? u : null);
     // Platzhalterbilder der Anbieter (z. B. Yahoos lila Logo) zählen als „kein Bild“:
     // bekannte Muster und jede Bild-URL, die bei drei oder mehr Meldungen gleich ist.
@@ -321,4 +328,13 @@ export async function getNews(symbol: string, days = 7): Promise<NewsItem[]> {
         image: realImage(n.image),
       }));
   });
+}
+
+/** Krypto-Meldungen, die den Coin nennen (Kürzel oder Name); nennt keine ihn, bleiben alle (allgemeine Marktlage). */
+async function aboutCoin<T extends { headline: string; summary: string }>(symbol: string, all: T[]): Promise<T[]> {
+  const name = (await coinProfile(symbol).catch(() => null))?.name;
+  const words = [cryptoBase(symbol), name].filter((w): w is string => !!w).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const re = new RegExp(`\\b(${words.join("|")})\\b`, "i");
+  const hits = all.filter((n) => re.test(`${n.headline} ${n.summary}`));
+  return hits.length ? hits : all;
 }

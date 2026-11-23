@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { readCache, writeCache } from "../lib/cache";
-import { quoteInterval } from "../lib/marketHours";
+import { FULL_REFRESH_MS, marketActive, quoteInterval } from "../lib/marketHours";
+import { isCrypto } from "../lib/symbols";
 import {
   fetchEvents,
   fetchProfiles,
@@ -220,12 +221,21 @@ export function useWatchlistData(userId: string) {
   // Polling: im verborgenen Tab aussetzen (beim Zurückkehren lädt der Sichtbarkeits-Handler nach)
   useEffect(() => {
     if (!allowed || !symbolKey) return;
+    const symbols = symbolKey.split(",");
+    // Kryptowerte handeln rund um die Uhr: außerhalb der Börsenzeiten nur sie im Minutentakt, den Rest alle 15 min
+    const crypto = symbols.filter(isCrypto);
     let id: ReturnType<typeof setTimeout>;
+    let lastFull = Date.now();
     const tick = () => {
-      if (document.visibilityState === "visible") loadQuotes(symbolKey.split(","), true);
-      id = setTimeout(tick, quoteInterval());
+      if (document.visibilityState === "visible") {
+        if (marketActive() || Date.now() - lastFull >= FULL_REFRESH_MS - 1000) {
+          lastFull = Date.now();
+          loadQuotes(symbols, true);
+        } else loadQuotes(crypto, true);
+      }
+      id = setTimeout(tick, quoteInterval(new Date(), crypto.length > 0));
     };
-    id = setTimeout(tick, quoteInterval());
+    id = setTimeout(tick, quoteInterval(new Date(), crypto.length > 0));
     return () => clearTimeout(id);
   }, [allowed, symbolKey, loadQuotes]);
 
