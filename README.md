@@ -146,7 +146,7 @@ After updating stockdeck, run the same command again to apply new migrations and
 3. VAPID keys: `npx web-push generate-vapid-keys`.
 4. Function secrets: copy `supabase/functions/.env.example` to `supabase/functions/.env`, fill it in, then `supabase secrets set --env-file supabase/functions/.env` and `supabase functions deploy market alerts mcp`.
 5. Auth in the dashboard: enable Google (disable email sign-in), set the site URL and redirect URLs (app URL, `https://*.<your-domain>/**`, `<app-url>/oauth/consent**`), point the “Before User Created” hook to `public.hook_before_user_created`, enable the OAuth server with dynamic client registration.
-6. First admin: `insert into public.allowed_emails (email, is_admin) values ('you@example.com', true);`
+6. First admin: `insert into public.allowed_emails (email, is_admin) values ('you@example.com', true);` Further people are added by an admin on the Account page.
 7. Frontend: `cp .env.example .env` and fill in the Supabase URL, publishable key, app URL and VAPID public key.
 
 </details>
@@ -157,7 +157,7 @@ After updating stockdeck, run the same command again to apply new migrations and
 npm run lint && npx tsc -b && npm test && npm run build
 ```
 
-CI runs lint, type check and tests on pull requests (`.github/workflows/ci.yml`). Run the same checks locally before pushing. Changes are listed in [CHANGELOG.md](CHANGELOG.md).
+`npm test` also runs all migrations in an in-memory Postgres (PGlite, no Docker) and checks the database permissions (`supabase/tests/`). CI runs lint, type check and tests on pull requests (`.github/workflows/ci.yml`). Run the same checks locally before pushing. Changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
 ## Deploy
 
