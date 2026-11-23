@@ -12,7 +12,7 @@ export const TOOLS = [
   {
     name: "search_stock",
     description:
-      "Sucht Aktien, ETFs und Kryptowerte nach Name oder Ticker (z. B. 'nvidia', 'SAP', 'bitcoin'). Liefert Ticker und Name; Krypto kommt als Euro-Paar (BTC-EUR). Vor add_stock nutzen, wenn der Ticker unklar ist.",
+      "Sucht Aktien, ETFs und Kryptowerte nach Name oder Ticker (z. B. 'nvidia', 'SAP', 'bitcoin'). Liefert Ticker und Name; Krypto kommt als Euro- und Dollar-Paar (BTC-EUR, BTC-USD); 'btc-usdt' findet das Dollar-Paar. Vor add_stock nutzen, wenn der Ticker unklar ist.",
     inputSchema: {
       type: "object",
       properties: { query: { type: "string", description: "Firmenname oder Ticker" } },

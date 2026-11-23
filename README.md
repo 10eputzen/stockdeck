@@ -12,7 +12,7 @@ A self-hosted watchlist and portfolio tracker as an installable web app (PWA): l
 
 The UI is available in English and German (browser language by default, switchable in the account settings). Translations live in `src/locales/*.json`; adding a language means adding one file.
 
-**Stack:** React 19 + TypeScript (Vite), PWA · Supabase (Postgres with Row Level Security, Google sign-in, Edge Functions, pg_cron) · any static host (Cloudflare Pages by default) · quotes from [Finnhub](https://finnhub.io), charts, non-US symbols and crypto (`BTC-EUR`) via Yahoo chart data, coin logos from [CoinGecko](https://www.coingecko.com).
+**Stack:** React 19 + TypeScript (Vite), PWA · Supabase (Postgres with Row Level Security, Google sign-in, Edge Functions, pg_cron) · any static host (Cloudflare Pages by default) · quotes from [Finnhub](https://finnhub.io), charts, non-US symbols and crypto (`BTC-EUR`, `BTC-USD`) via Yahoo chart data, coin logos from [CoinGecko](https://www.coingecko.com).
 
 ## Features
 

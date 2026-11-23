@@ -2,7 +2,7 @@
 // Der API-Key bleibt serverseitig (Supabase-Secret FINNHUB_API_KEY).
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { isUsSymbol, yahooFetch, yahooQuote, yahooSearch, yahooSymbol } from "./yahoo.ts";
-import { coinProfile, cryptoHits, cryptoName, isCryptoSymbol } from "./crypto.ts";
+import { coinProfile, cryptoHits, cryptoName, cryptoQuery, isCryptoSymbol } from "./crypto.ts";
 
 const FINNHUB = "https://finnhub.io/api/v1";
 const CACHE_SECONDS = 60;
@@ -43,23 +43,25 @@ async function finnhub(path: string, params: Record<string, string>) {
 export async function searchSymbols(query: string): Promise<SearchResult[]> {
   const q = query.trim().slice(0, 40);
   if (!q) return [];
+  // „btc-usdt“, „BTCUSDT“: Yahoo kennt nur „btc“, das Dollar-Paar kommt dann zuerst
+  const pair = cryptoQuery(q);
   const [us, yahoo] = await Promise.all([
-    finnhub("/search", { q, exchange: "US" })
+    pair ? Promise.resolve([] as SearchResult[]) : finnhub("/search", { q, exchange: "US" })
       .then((data) =>
         (data.result ?? [])
           .filter((r: { type: string }) => r.type === "Common Stock" || r.type === "ADR")
           .map((r: { symbol: string; description: string }) => ({ symbol: r.symbol, name: r.description }))
       )
       .catch(() => [] as SearchResult[]),
-    yahooSearch(q, 10).catch(() => []),
+    yahooSearch(pair?.base ?? q, 10).catch(() => []),
   ]);
   // Yahoo liefert US-Werte ohne Endung; die kommen schon von Finnhub
   const extra = yahoo
     .filter((y) => y.type !== "CRYPTOCURRENCY" && !isUsSymbol(y.symbol) && SYMBOL_RE.test(y.symbol))
     .map((y) => ({ symbol: y.symbol, name: y.exchange ? `${y.name} · ${y.exchange}` : y.name }));
-  const crypto = (await cryptoHits(yahoo)).filter((c) => SYMBOL_RE.test(c.symbol));
+  const crypto = (await cryptoHits(yahoo, pair?.currency)).filter((c) => SYMBOL_RE.test(c.symbol));
   // Sucht jemand nach einem Coin („btc“, „solana“), stehen die Kryptopaare oben, sonst unter den Aktien
-  const coinFirst = yahoo[0]?.type === "CRYPTOCURRENCY";
+  const coinFirst = !!pair || yahoo[0]?.type === "CRYPTOCURRENCY";
   const seen = new Set<string>();
   return (coinFirst ? [...crypto, ...us.slice(0, 7), ...extra] : [...us.slice(0, 7), ...crypto, ...extra])
     .filter((r) => !seen.has(r.symbol) && seen.add(r.symbol))

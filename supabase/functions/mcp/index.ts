@@ -332,7 +332,7 @@ async function handle(msg: JsonRpcRequest, db: SupabaseClient, admin: SupabaseCl
         capabilities: { tools: { listChanged: false } },
         serverInfo: SERVER,
         instructions:
-          `Watchlist der App stockdeck${SITE_URL ? ` (${SITE_URL})` : ""}. US-Ticker (AAPL), andere Börsen in Yahoo-Schreibweise (SAP.DE) und Kryptowerte als Paar (BTC-EUR). Kurse in der Währung des Werts (US-Werte USD von Finnhub, sonst Yahoo).`,
+          `Watchlist der App stockdeck${SITE_URL ? ` (${SITE_URL})` : ""}. US-Ticker (AAPL), andere Börsen in Yahoo-Schreibweise (SAP.DE) und Kryptowerte als Paar in Euro oder Dollar (BTC-EUR, BTC-USD). Kurse in der Währung des Werts (US-Werte USD von Finnhub, sonst Yahoo).`,
       });
     }
     case "ping":

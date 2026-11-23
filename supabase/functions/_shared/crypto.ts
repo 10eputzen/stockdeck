@@ -1,38 +1,40 @@
 // Kryptowerte (BTC-EUR, ETH-USD …): Kurse und Charts kommen wie bei Nicht-US-Werten von Yahoo,
 // Namen und Logos von CoinGecko (öffentliche API ohne Schlüssel), News aus Finnhubs Krypto-Kategorie.
 import { yahooQuote, type YahooHit } from "./yahoo.ts";
+import { cryptoBase, cryptoName, isCryptoSymbol, pairsFor, type PairCurrency } from "./cryptoPairs.ts";
 
-const QUOTE_CCY = "EUR|USD|GBP|CHF|CAD|JPY";
-const CRYPTO_RE = new RegExp(`^[A-Z0-9]{1,15}-(${QUOTE_CCY})$`);
-const QUOTE_SUFFIX = new RegExp(`\\s+(${QUOTE_CCY})$`);
-
-/** Yahoo-Schreibweise für Kryptopaare: Coin, Bindestrich, Währung (BTC-EUR). */
-export const isCryptoSymbol = (s: string) => CRYPTO_RE.test(s);
-
-/** Coin-Kürzel ohne Währung: BTC-EUR → BTC. */
-export const cryptoBase = (s: string) => s.slice(0, s.lastIndexOf("-"));
-
-/** „Bitcoin EUR“ → „Bitcoin“. */
-export const cryptoName = (name: string) => name.replace(QUOTE_SUFFIX, "").trim();
+export { cryptoBase, cryptoName, cryptoQuery, isCryptoSymbol } from "./cryptoPairs.ts";
 
 /**
- * Krypto-Treffer der Yahoo-Suche: je Coin ein Paar, bevorzugt in Euro (das Depot rechnet in EUR).
- * Gibt es kein Euro-Paar, bleibt Yahoos Treffer (meist USD).
+ * Krypto-Treffer der Yahoo-Suche: je Coin das Euro- und das Dollar-Paar (BTC-EUR, BTC-USD),
+ * die Wunschwährung zuerst. Das Depot rechnet Dollar-Kurse wie bei US-Aktien in Euro um.
+ * Gibt es keins von beiden, bleibt Yahoos Treffer (z. B. BTC-CAD).
  */
-export async function cryptoHits(hits: YahooHit[], max = 4): Promise<{ symbol: string; name: string }[]> {
+export async function cryptoHits(
+  hits: YahooHit[],
+  prefer: PairCurrency = "EUR",
+  max = 3,
+): Promise<{ symbol: string; name: string }[]> {
+  const known = new Set(hits.map((h) => h.symbol));
   const coins = new Map<string, YahooHit>();
   for (const h of hits) {
     if (h.type !== "CRYPTOCURRENCY" || !isCryptoSymbol(h.symbol)) continue;
     const base = cryptoBase(h.symbol);
-    if (!coins.has(base) || h.symbol.endsWith("-EUR")) coins.set(base, h);
+    if (!coins.has(base)) coins.set(base, h);
   }
-  return Promise.all(
+  const perCoin = await Promise.all(
     [...coins].slice(0, max).map(async ([base, h]) => {
-      const eur = `${base}-EUR`;
-      const hasEur = h.symbol === eur || (await yahooQuote(eur).catch(() => null)) != null;
-      return { symbol: hasEur ? eur : h.symbol, name: cryptoName(h.name) };
+      const name = cryptoName(h.name);
+      const pairs = await Promise.all(
+        pairsFor(base, prefer).map(async (symbol) =>
+          known.has(symbol) || (await yahooQuote(symbol).catch(() => null)) != null ? symbol : null,
+        ),
+      );
+      const found = pairs.filter((s): s is string => s != null);
+      return (found.length ? found : [h.symbol]).map((symbol) => ({ symbol, name }));
     }),
   );
+  return perCoin.flat();
 }
 
 /**
