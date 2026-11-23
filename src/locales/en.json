@@ -562,5 +562,25 @@
     "errExists": "This address already has access.",
     "errForbidden": "Only admins can do this.",
     "errGeneric": "That did not work."
+  },
+  "palette": {
+    "title": "Command palette",
+    "open": "Search & commands",
+    "placeholder": "Stock, page or command …",
+    "inWatchlist": "In your watchlist",
+    "addNew": "New stocks",
+    "goTo": "Go to",
+    "actions": "Actions",
+    "goWatchlist": "Watchlist",
+    "goPortfolio": "Portfolio",
+    "goAccount": "Account & alerts",
+    "newGroup": "New group",
+    "import": "Import watchlist",
+    "themeLight": "Light theme",
+    "themeDark": "Dark theme",
+    "add": "Watchlist",
+    "addHint": "Add to watchlist (Shift+Enter)",
+    "nothing": "Nothing found",
+    "keys": "↑↓ select · Enter open · Shift+Enter add to watchlist · Esc close"
   }
 }

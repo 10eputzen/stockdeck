@@ -1,6 +1,6 @@
 import { DndContext } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { lazy, Suspense, type ReactNode, useCallback, useMemo, useState, type CSSProperties } from "react";
+import { lazy, Suspense, type ReactNode, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { COL_GAP, gridTemplate, useColumns } from "./lib/columns";
 import type { SharedItem, WatchItem } from "./lib/supabase";
@@ -21,6 +21,8 @@ import { SharedSection } from "./watchlist/SharedSection";
 import { PlainRow, SkeletonRow, StaticRow, StockRow } from "./watchlist/Rows";
 import { DragPreview, StatusLine, UngroupedSection } from "./watchlist/ListParts";
 import { WatchDialogs } from "./watchlist/WatchDialogs";
+import { CommandPalette } from "./watchlist/CommandPalette";
+import { isPaletteKey } from "./lib/palette";
 
 // Chart-Bibliothek erst laden, wenn eine Detailseite geöffnet wird
 const Detail = lazy(() =>
@@ -78,6 +80,20 @@ export function Watchlist({
   const [toast, setToast] = useState<ToastState>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState<string | null>(null);
+  // 0 = zu; jede Öffnung bekommt eine neue Nummer, so öffnet ein schnelles Esc + Strg+K sicher neu
+  const [palette, setPalette] = useState(0);
+  const paletteSeq = useRef(0);
+  const openPalette = useCallback(() => setPalette(++paletteSeq.current), []);
+  // Befehlspalette: Strg+K / Cmd+K überall, „/“ außerhalb von Eingabefeldern
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!isPaletteKey(e, e.target) || document.querySelector("dialog[open]:not(.palette)")) return;
+      e.preventDefault();
+      openPalette();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [openPalette]);
 
   const sortedGroups = useMemo(() => [...groups].sort(byPos), [groups]);
   const lists = useMemo(() => {
@@ -210,12 +226,28 @@ export function Watchlist({
   // nur der Seiteninhalt wird getauscht und blendet ein
   const frame = (body: ReactNode) => (
     <>
-      {!narrow && !loc.symbol && <DeskTabs route={page} go={go} />}
+      {!narrow && !loc.symbol && <DeskTabs route={page} go={go} onPalette={openPalette} />}
       <PageView
         id={loc.symbol ? `s/${loc.symbol}` : page === "suche" ? "liste" : page}
         order={loc.symbol ? 3 : page === "portfolio" ? 1 : page === "konto" ? 2 : 0}
       >{body}</PageView>
       {dialogs}
+      {palette > 0 && (
+        <CommandPalette
+          key={palette}
+          watch={items ?? []}
+          existing={existing}
+          onClose={() => setPalette(0)}
+          onOpen={open}
+          onAdd={add}
+          go={go}
+          onAddGroup={async () => {
+            await addGroup();
+            go("liste");
+          }}
+          onImport={() => setImportOpen(true)}
+        />
+      )}
       {narrow && !loc.symbol && <BottomNav route={route} go={go} />}
     </>
   );
