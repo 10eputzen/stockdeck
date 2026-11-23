@@ -135,7 +135,9 @@ async function collectProblems(url) {
   } catch {
     fail("Playwright fehlt – Live-Test nicht möglich. Deploy ist raus, aber ungeprüft!");
   }
-  const browser = await chromium.launch();
+  // Cloud-Container bringen ein eigenes Chromium mit, das zur Playwright-Version des Repos nicht passen muss
+  const executablePath = process.env.STOCKDECK_CHROMIUM || process.env.CHROME_PATH || undefined;
+  const browser = await chromium.launch(executablePath ? { executablePath } : {});
   const page = await browser.newPage();
   const problems = [];
   page.on("pageerror", (e) => problems.push(`pageerror: ${e.message}`));
