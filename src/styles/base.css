@@ -263,3 +263,24 @@ body.col-resizing { cursor: col-resize; user-select: none; }
 .desktabs .palette-hint { margin-left: auto; align-self: center; background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); padding: 4px 8px; font-size: 0.75rem; display: inline-flex; gap: 8px; align-items: center; }
 .desktabs .palette-hint:hover { color: var(--text); }
 .desktabs .palette-hint kbd { font: inherit; font-size: 0.7rem; border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; }
+
+/* Heatmap der Watchlist */
+.heat { display: grid; gap: 14px; }
+.heat-breadth { margin: 0; display: flex; gap: 10px; }
+.heat-group { display: grid; gap: 6px; }
+.heat-title { margin: 0; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.heat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; }
+.heat-tile {
+  display: grid; gap: 2px; justify-items: start; text-align: left; padding: 10px 12px; min-height: 76px;
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text); cursor: pointer;
+  background: var(--surface); transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.heat-tile.up { background: color-mix(in srgb, var(--up) var(--heat, 0%), var(--surface)); }
+.heat-tile.down { background: color-mix(in srgb, var(--down) var(--heat, 0%), var(--surface)); }
+.heat-tile.none { color: var(--muted); }
+.heat-tile:hover { border-color: var(--accent); transform: translateY(-1px); }
+.heat-sym { font-weight: 700; letter-spacing: 0.03em; }
+.heat-pct { font-weight: 600; font-size: 1.05rem; }
+.heat-price { font-size: 0.75rem; opacity: 0.8; }
+@media (max-width: 767px) { .heat-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .heat-tile { transition: none; } .heat-tile:hover { transform: none; } }

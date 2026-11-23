@@ -21,6 +21,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - Notes per stock: a "Notes" tab on the detail page for your thesis, reasons to buy and what to watch. Saves while you type, private per user (new table `stock_notes` with Row Level Security). The MCP server gets `get_notes` and `set_note` (replace or append with date), so an assistant can keep your notes up to date. Needs the new migration and a redeploy of the `mcp` function.
 
+- Heatmap view for the watchlist: "Tiles" next to the columns menu (grid icon on phones) shows every stock as a tile colored by today's move (full color from ±3 %), per group and shared list, with a market breadth line (rising / falling, average move). Click a tile to open the stock. The choice is remembered per device. On phones the Edit button becomes a pencil icon so the title has room.
+
 ### Changed
 
 - Segmented controls size to their number of buttons (the Today/Total switch no longer has an empty third slot).

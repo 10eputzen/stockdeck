@@ -22,6 +22,7 @@ import { PlainRow, SkeletonRow, StaticRow, StockRow } from "./watchlist/Rows";
 import { DragPreview, StatusLine, UngroupedSection } from "./watchlist/ListParts";
 import { WatchDialogs } from "./watchlist/WatchDialogs";
 import { CommandPalette } from "./watchlist/CommandPalette";
+import { Heatmap } from "./watchlist/Heatmap";
 import { isPaletteKey } from "./lib/palette";
 
 // Chart-Bibliothek erst laden, wenn eine Detailseite geöffnet wird
@@ -82,6 +83,23 @@ export function Watchlist({
   const [shareOpen, setShareOpen] = useState<string | null>(null);
   // 0 = zu; jede Öffnung bekommt eine neue Nummer, so öffnet ein schnelles Esc + Strg+K sicher neu
   const [palette, setPalette] = useState(0);
+  // Liste oder Kacheln (Heatmap), je Gerät gemerkt
+  const [view, setView] = useState<"list" | "heat">(() => {
+    try {
+      return localStorage.getItem("stockdeck.watchView") === "heat" ? "heat" : "list";
+    } catch {
+      return "list";
+    }
+  });
+  const toggleView = () => {
+    const next = view === "heat" ? "list" : "heat";
+    setView(next);
+    try {
+      localStorage.setItem("stockdeck.watchView", next);
+    } catch {
+      /* ohne Speicher gilt es für die Sitzung */
+    }
+  };
   const paletteSeq = useRef(0);
   const openPalette = useCallback(() => setPalette(++paletteSeq.current), []);
   // Befehlspalette: Strg+K / Cmd+K überall, „/“ außerhalb von Eingabefeldern
@@ -326,8 +344,21 @@ export function Watchlist({
         onImport={() => setImportOpen(true)}
         cols={cols}
         setCols={setCols}
+        view={view}
+        onToggleView={toggleView}
       />
 
+      {view === "heat" && !loading ? (
+        <Heatmap
+          sections={[
+            ...sortedGroups.map((g) => ({ id: g.id, name: g.name, items: lists[g.id] ?? [] })),
+            { id: NONE, name: null, items: lists[NONE] },
+            ...sharedLists.map((l) => ({ id: `s:${l.id}`, name: l.name, items: sharedByList[l.id] ?? [] })),
+          ]}
+          quotes={quotes}
+          onOpen={open}
+        />
+      ) : (
       <div
         className={`watch ${editMode || !narrow ? "editing" : ""} ${refreshing && !loading ? "stale" : ""}`}
         style={gridVars}
@@ -418,6 +449,7 @@ export function Watchlist({
           </DndContext>
         )}
       </div>
+      )}
 
       {narrow && page === "suche" && (
         <SearchSheet onAdd={add} existing={existing} onClose={back} />

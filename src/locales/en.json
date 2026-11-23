@@ -592,5 +592,13 @@
     "private": "Only visible to you, saves automatically.",
     "error": "Saving failed, please type again.",
     "mcpHint": "Also available via MCP (get_notes, set_note)."
+  },
+  "heatmap": {
+    "tiles": "Tiles",
+    "list": "List",
+    "showTiles": "Show as tiles (heatmap)",
+    "showList": "Show as list",
+    "avg": "avg {{pct}}",
+    "ungrouped": "Ungrouped"
   }
 }
