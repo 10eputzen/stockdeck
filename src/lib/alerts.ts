@@ -4,7 +4,7 @@ import { supabase } from './supabase'
 /** Öffentlicher VAPID-Schlüssel (der private liegt nur in den Supabase-Secrets). */
 const VAPID_PUBLIC: string = import.meta.env.VITE_VAPID_PUBLIC_KEY ?? ''
 
-export type AlertKind = 'price_above' | 'price_below' | 'change_pct_day' | 'finanzplan_gain' | 'finanzplan_stop'
+export type AlertKind = 'price_above' | 'price_below' | 'change_pct_day' | 'finanzplan_gain' | 'finanzplan_stop' | 'earnings_tomorrow'
 
 export type AlertRule = {
   id: string
@@ -25,6 +25,7 @@ export const KIND_LABEL: Record<AlertKind, string> = {
   change_pct_day: t('common.alertChangePctDay'),
   finanzplan_gain: t('common.alertFinanzplanGain'),
   finanzplan_stop: t('common.alertFinanzplanStop'),
+  earnings_tomorrow: t('common.alertEarnings'),
 }
 
 export const RULE_COLS = 'id, kind, symbol, threshold, params, active, note, created_at'

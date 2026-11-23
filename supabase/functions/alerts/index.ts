@@ -4,10 +4,11 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
 import { getQuotes } from "../_shared/finnhub.ts";
+import { getEvents } from "../_shared/fundamentals.ts";
 import { getFx } from "../_shared/portfolio.ts";
 import { holdings, type Tx } from "../_shared/positions.ts";
 import { isAllowedOrigin } from "../_shared/cors.ts";
-import { berlinNow, evaluateRules, type Push, type Quote, type Rule } from "./evaluate.ts";
+import { berlinNow, earningsSymbols, evaluateRules, type Earnings, type Push, type Quote, type Rule } from "./evaluate.ts";
 import { asLang, TEXTS, type Lang } from "./texts.ts";
 
 
@@ -62,7 +63,7 @@ async function run(admin: SupabaseClient) {
   const userHoldings = new Map([...txByUser].map(([u, txs]) => [u, { hs: holdings(txs, fx), txs }]));
 
   const symbols = new Set<string>();
-  for (const r of all) if (r.symbol) symbols.add(r.symbol);
+  for (const r of all) if (r.symbol && r.kind !== "earnings_tomorrow") symbols.add(r.symbol);
   for (const { hs } of userHoldings.values()) for (const h of hs) if (h.quantity > 1e-6) symbols.add(h.symbol);
   const quotes: Record<string, Quote> = {};
   const list = [...symbols];
@@ -73,7 +74,20 @@ async function run(admin: SupabaseClient) {
   const { data: subLangs } = await admin.from("push_subscriptions").select("user_id, lang").order("created_at", { ascending: true });
   for (const s of subLangs ?? []) langOf.set(s.user_id, asLang(s.lang));
 
-  const { events, oneShot } = evaluateRules({ rules: all, quotes, userHoldings, fx, today, langOf });
+  // Quartalszahlen: Watchlists der Nutzer mit Watchlist-Regel, Termine aus symbol_events (24 h gecacht)
+  const earningsRules = all.filter((r) => r.kind === "earnings_tomorrow");
+  const watchlists = new Map<string, string[]>();
+  const wlUsers = [...new Set(earningsRules.filter((r) => !r.symbol).map((r) => r.user_id))];
+  if (wlUsers.length) {
+    const { data: items, error: wlErr } = await admin.from("watchlist_items").select("user_id, symbol").in("user_id", wlUsers).limit(20000);
+    if (wlErr) throw wlErr;
+    for (const i of items ?? []) watchlists.set(i.user_id, [...(watchlists.get(i.user_id) ?? []), i.symbol]);
+  }
+  const earnings: Record<string, Earnings> = {};
+  const earningsSyms = [...new Set(earningsRules.flatMap((r) => earningsSymbols(r, watchlists)))];
+  if (earningsSyms.length) for (const e of await getEvents(admin, earningsSyms)) earnings[e.symbol] = e;
+
+  const { events, oneShot } = evaluateRules({ rules: all, quotes, userHoldings, fx, today, langOf, earnings, watchlists });
 
   let fired = 0;
   for (const e of events) {

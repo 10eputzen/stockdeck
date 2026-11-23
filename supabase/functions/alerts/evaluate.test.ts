@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { holdings, type Tx } from '../_shared/positions.ts'
-import { berlinNow, evaluateRules, type Quote, type Rule, type UserHoldings } from './evaluate.ts'
+import { berlinNow, evaluateRules, nextTradingDay, type Quote, type Rule, type UserHoldings } from './evaluate.ts'
 
 const today = '2026-11-20'
 const rule = (r: Partial<Rule>): Rule => ({ id: 'r1', user_id: 'u1', kind: 'price_above', symbol: 'AAPL', threshold: 100, params: {}, ...r })
@@ -114,5 +114,50 @@ describe('berlinNow', () => {
     expect(berlinNow(new Date('2026-11-21T12:00:00Z')).open).toBe(false)
     expect(berlinNow(new Date('2026-11-20T21:15:00Z')).open).toBe(true)
     expect(berlinNow(new Date('2026-11-20T21:16:00Z')).open).toBe(false)
+  })
+})
+
+describe('earnings reminder', () => {
+  const one = rule({ id: 'e1', kind: 'earnings_tomorrow', symbol: 'AAPL', threshold: 1 })
+  const all = rule({ id: 'e2', kind: 'earnings_tomorrow', symbol: null, threshold: 1 })
+  const watchlists = new Map([['u1', ['AAPL', 'MSFT']]])
+  const runE = (rules: Rule[], earnings: Record<string, { next_date: string | null; hour: 'bmo' | 'amc' | 'dmh' | null }>, day = today) =>
+    evaluateRules({ rules, quotes: {}, userHoldings: new Map(), fx: {}, today: day, langOf: new Map(), earnings, watchlists })
+
+  it('finds the next trading day', () => {
+    expect(nextTradingDay('2026-11-19')).toBe('2026-11-20') // Thu → Fri
+    expect(nextTradingDay('2026-11-20')).toBe('2026-11-23') // Fri → Mon
+    expect(nextTradingDay('2026-11-22')).toBe('2026-11-23') // Sun → Mon
+  })
+
+  it('reminds the trading day before, once per stock and date', () => {
+    const { events, oneShot } = runE([one], { AAPL: { next_date: '2026-11-23', hour: 'amc' } })
+    expect(events).toHaveLength(1)
+    expect(events[0].dedupe_key).toBe('earnings:AAPL:2026-11-23')
+    expect(events[0].push.text('en').title).toBe('AAPL reports earnings on Monday')
+    expect(events[0].push.text('en').body).toBe('After the US market closes.')
+    expect(oneShot).toEqual([])
+  })
+
+  it('says tomorrow on a normal weekday', () => {
+    const { events } = runE([one], { AAPL: { next_date: '2026-11-20', hour: 'bmo' } }, '2026-11-19')
+    expect(events[0].push.text('de').title).toBe('AAPL meldet morgen Quartalszahlen')
+  })
+
+  it('stays quiet for other dates or without a date', () => {
+    expect(runE([one], { AAPL: { next_date: '2026-11-24', hour: null } }).events).toHaveLength(0)
+    expect(runE([one], { AAPL: { next_date: null, hour: null } }).events).toHaveLength(0)
+    expect(runE([one], {}).events).toHaveLength(0)
+  })
+
+  it('covers the whole watchlist and sends one push when both rules match', () => {
+    const earnings = { AAPL: { next_date: '2026-11-23', hour: null }, MSFT: { next_date: '2026-11-23', hour: 'bmo' as const } }
+    const { events } = runE([one, all], earnings)
+    expect(events.map((e) => e.symbol).sort()).toEqual(['AAPL', 'MSFT'])
+  })
+
+  it('does not fetch quotes for earnings rules', async () => {
+    const src = (await import('node:fs')).readFileSync(new URL('./index.ts', import.meta.url), 'utf8')
+    expect(src).toContain('r.kind !== "earnings_tomorrow") symbols.add')
   })
 })

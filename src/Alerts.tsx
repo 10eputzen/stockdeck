@@ -22,6 +22,7 @@ const when = (iso: string) =>
   new Date(iso).toLocaleString(LOCALE, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 
 function ruleText(r: AlertRule) {
+  if (r.kind === 'earnings_tomorrow') return KIND_LABEL[r.kind]
   if (r.kind === 'change_pct_day') return `${KIND_LABEL[r.kind]}${fmt(r.threshold)} %`
   return `${KIND_LABEL[r.kind]} ${fmt(r.threshold)}`
 }
@@ -83,6 +84,15 @@ export function AlertsSection({ onToast, onOpen }: { onToast: (t: string) => voi
   }
 
   const fp = rules.filter((r) => r.kind.startsWith('finanzplan'))
+  const earningsAll = rules.find((r) => r.kind === 'earnings_tomorrow' && !r.symbol)
+
+  async function toggleEarnings(on: boolean) {
+    const { error } = on
+      ? await supabase.from('alert_rules').insert({ kind: 'earnings_tomorrow', symbol: null, threshold: 1 })
+      : await supabase.from('alert_rules').delete().eq('id', earningsAll?.id ?? '')
+    if (error) onToast(t('detail.saveFailed'))
+    load()
+  }
   const own = rules.filter((r) => r.symbol)
 
   return (
@@ -109,6 +119,17 @@ export function AlertsSection({ onToast, onOpen }: { onToast: (t: string) => voi
             )}
           </>
         )}
+      </div>
+
+      <h2 className="mh2">{t('detail.earningsAlerts')}</h2>
+      <div className="mcard">
+        <div className="mitem alrow">
+          <label className="alcheck">
+            <input type="checkbox" checked={Boolean(earningsAll)} onChange={(e) => toggleEarnings(e.target.checked)} />
+            {t('detail.earningsWatchlist')}
+          </label>
+        </div>
+        <p className="mnote">{t('detail.earningsNote')}</p>
       </div>
 
       {fp.length > 0 && (
@@ -230,7 +251,7 @@ export function AlertDialog({
 
   async function add() {
     setError(null)
-    const n = parseNum(value)
+    const n = kind === 'earnings_tomorrow' ? 1 : parseNum(value)
     if (!Number.isFinite(n) || n <= 0) return setError(t('detail.enterPositiveValue'))
     const { error } = await supabase.from('alert_rules').insert({ symbol, kind, threshold: n })
     if (error) return setError(error.message)
@@ -255,7 +276,7 @@ export function AlertDialog({
           {rules.map((r) => (
             <li key={r.id}>
               <span className={r.active ? '' : 'muted'}>
-                {ruleText(r)} {r.kind !== 'change_pct_day' && (currency ?? '')}
+                {ruleText(r)} {r.kind !== 'change_pct_day' && r.kind !== 'earnings_tomorrow' && (currency ?? '')}
                 {!r.active && ` · ${t('detail.triggered')}`}
               </span>
               <button className="ghost icon" onClick={() => remove(r)} aria-label={t('detail.deleteAlert')} title={t('detail.delete')}>
@@ -272,9 +293,10 @@ export function AlertDialog({
             <option value="price_above">{t('detail.kindPriceAbove')}</option>
             <option value="price_below">{t('detail.kindPriceBelow')}</option>
             <option value="change_pct_day">{t('detail.kindChangePctDay')}</option>
+            <option value="earnings_tomorrow">{t('detail.kindEarnings')}</option>
           </select>
         </label>
-        <label>
+        <label className={kind === 'earnings_tomorrow' ? 'hidden-keep' : undefined}>
           {kind === 'change_pct_day' ? t('detail.percent') : t('detail.priceWithCurrency', { currency: currency ?? t('detail.quoteCurrency') })}
           <input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
         </label>
