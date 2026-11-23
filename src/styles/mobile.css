@@ -15,7 +15,7 @@
 .mtools { display: flex; gap: 8px; }
 .mtools button { min-height: 40px; min-width: 44px; }
 /* Bearbeiten/Fertig: gleiche Breite und Rahmen in beiden Zuständen, damit nichts springt */
-.mtools .editbtn { width: 6.8rem; text-align: center; }
+.mtools .editbtn { width: 4.8rem; text-align: center; display: grid; place-items: center; }
 .mtools .editbtn.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent, #fff); }
 .inlist { margin: 0 0 0 auto; white-space: nowrap; }
 .add.inline { width: 100%; }

@@ -592,5 +592,13 @@
     "private": "Nur für dich sichtbar, speichert automatisch.",
     "error": "Speichern fehlgeschlagen, bitte erneut tippen.",
     "mcpHint": "Auch per MCP lesbar (get_notes, set_note)."
+  },
+  "heatmap": {
+    "tiles": "Kacheln",
+    "list": "Liste",
+    "showTiles": "Als Kacheln (Heatmap) zeigen",
+    "showList": "Als Liste zeigen",
+    "avg": "Ø {{pct}}",
+    "ungrouped": "Ohne Gruppe"
   }
 }
