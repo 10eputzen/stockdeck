@@ -17,6 +17,7 @@ import { getProfiles, getQuotes, searchSymbols, SYMBOL_RE } from "../_shared/fin
 import { getChart, getNewsPage, isRange } from "../_shared/history.ts";
 import { getSignals } from "../_shared/signals.ts";
 import { callPortfolioTool, PORTFOLIO_TOOLS, PortfolioError } from "./portfolio.ts";
+import { callNoteTool, NOTE_TOOL_NAMES, NOTE_TOOLS, NoteError } from "./notes.ts";
 import {
   allowedOrigins,
   extractKey,
@@ -305,6 +306,7 @@ async function callTool(db: SupabaseClient, admin: SupabaseClient, userId: strin
     }
 
     default: {
+      if (NOTE_TOOL_NAMES.has(name)) return await callNoteTool(db, userId, name, args);
       return await callPortfolioTool(db, admin, userId, name, args);
     }
   }
@@ -312,7 +314,7 @@ async function callTool(db: SupabaseClient, admin: SupabaseClient, userId: strin
 
 // ---------- JSON-RPC ----------
 
-const TOOL_NAMES = new Set([...TOOLS, ...PORTFOLIO_TOOLS].map((t) => t.name));
+const TOOL_NAMES = new Set([...TOOLS, ...PORTFOLIO_TOOLS, ...NOTE_TOOLS].map((t) => t.name));
 
 async function handle(msg: JsonRpcRequest, db: SupabaseClient, admin: SupabaseClient, userId: string) {
   const id = msg.id ?? null;
@@ -329,7 +331,7 @@ async function handle(msg: JsonRpcRequest, db: SupabaseClient, admin: SupabaseCl
     case "ping":
       return ok(id, {});
     case "tools/list":
-      return ok(id, { tools: [...TOOLS, ...PORTFOLIO_TOOLS] });
+      return ok(id, { tools: [...TOOLS, ...PORTFOLIO_TOOLS, ...NOTE_TOOLS] });
     case "tools/call": {
       const name = String(msg.params?.name ?? "");
       const args = (msg.params?.arguments ?? {}) as Record<string, unknown>;
@@ -345,7 +347,7 @@ async function handle(msg: JsonRpcRequest, db: SupabaseClient, admin: SupabaseCl
           structuredContent: result,
         });
       } catch (e) {
-        const known = e instanceof ToolError || e instanceof PortfolioError;
+        const known = e instanceof ToolError || e instanceof PortfolioError || e instanceof NoteError;
         if (!known) console.error(name, e);
         log(known ? "tool_error" : "error");
         const text = known ? e.message : "Interner Fehler, bitte später erneut versuchen.";

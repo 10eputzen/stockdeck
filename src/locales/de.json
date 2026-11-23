@@ -507,7 +507,8 @@
     "byUser": "von {{user}}",
     "draggableItem": "verschiebbarer Wert",
     "addedByUser": "hinzugefügt von {{user}}",
-    "removeSymbol": "{{symbol}} entfernen"
+    "removeSymbol": "{{symbol}} entfernen",
+    "tabNotes": "Notizen"
   },
   "apiKeys": {
     "section": "KI-Zugriff (MCP)",
@@ -582,5 +583,14 @@
     "addHint": "Zur Watchlist hinzufügen (Umschalt+Enter)",
     "nothing": "Nichts gefunden",
     "keys": "↑↓ wählen · Enter öffnen · Umschalt+Enter zur Watchlist · Esc schließen"
+  },
+  "notes": {
+    "placeholder": "Warum diese Aktie? These, Kaufgründe, Kursziele, worauf du achten willst …",
+    "label": "Notiz zu {{symbol}}",
+    "saving": "Speichert …",
+    "savedAt": "Gespeichert {{time}}",
+    "private": "Nur für dich sichtbar, speichert automatisch.",
+    "error": "Speichern fehlgeschlagen, bitte erneut tippen.",
+    "mcpHint": "Auch per MCP lesbar (get_notes, set_note)."
   }
 }
