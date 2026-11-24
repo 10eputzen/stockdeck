@@ -25,6 +25,7 @@ import {
   type ChartRange,
 } from '../lib/supabase'
 import { dirOf } from '../lib/format'
+import { chartTimes, indexAt } from './chartTime'
 
 const RANGES: { r: ChartRange; label: string }[] = [
   { r: '1d', label: t('detail.range1d') },
@@ -51,7 +52,7 @@ const tick = {
   day: new Intl.DateTimeFormat(LOCALE, { timeZone: 'UTC', day: 'numeric', month: 'numeric' }),
   time: new Intl.DateTimeFormat(LOCALE, { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' }),
 }
-/** Achsenbeschriftung auf Deutsch (Zeiten sind bereits auf New York verschoben, daher UTC). */
+/** Achsenbeschriftung in der Sprache der App (Zeiten sind bereits auf Ortszeit verschoben, daher UTC). */
 function tickLabel(t: Time, type: TickMarkType) {
   const d = new Date(Number(t) * 1000)
   if (type === TickMarkType.Year) return tick.year.format(d)
@@ -61,7 +62,7 @@ function tickLabel(t: Time, type: TickMarkType) {
 }
 const compact = new Intl.NumberFormat(LOCALE, { notation: 'compact', maximumFractionDigits: 1 })
 
-type Legend = { time: string; o: number; h: number; l: number; c: number; v: number } | null
+type Legend = { time: number; o: number; h: number; l: number; c: number; v: number } | null
 
 type Series = {
   candles: ISeriesApi<'Candlestick'>
@@ -69,10 +70,9 @@ type Series = {
   volume: ISeriesApi<'Histogram'>
 }
 
-/** Daten in die Serien schreiben (Zeiten auf New-Yorker Ortszeit verschoben); liefert die Veränderung im Zeitraum. */
-function paintSeries(s: Series, d: ChartData): number | null {
+/** Daten in die Serien schreiben (Zeiten auf Ortszeit verschoben, siehe chartTimes); liefert die Veränderung im Zeitraum. */
+function paintSeries(s: Series, d: ChartData, times: number[]): number | null {
   const c = themeColors()
-  const shift = (t: number) => (t + d.gmtoffset) as UTCTimestamp
   const base = d.range === '1d' && d.prev_close ? d.prev_close : d.bars[0]?.o
   const last = d.bars[d.bars.length - 1]?.c
   const up = base != null && last != null ? last >= base : true
@@ -83,12 +83,12 @@ function paintSeries(s: Series, d: ChartData): number | null {
   const priceFormat = { type: 'price' as const, precision, minMove: 10 ** -precision }
   s.candles.applyOptions({ priceFormat })
   s.line.applyOptions({ priceFormat })
-  s.candles.setData(d.bars.map((b) => ({ time: shift(b.t), open: b.o, high: b.h, low: b.l, close: b.c })))
-  s.line.setData(d.bars.map((b) => ({ time: shift(b.t), value: b.c })))
+  s.candles.setData(d.bars.map((b, i) => ({ time: times[i] as UTCTimestamp, open: b.o, high: b.h, low: b.l, close: b.c })))
+  s.line.setData(d.bars.map((b, i) => ({ time: times[i] as UTCTimestamp, value: b.c })))
   s.line.applyOptions({ lineColor: col, topColor: alpha(col, 0.28), bottomColor: alpha(col, 0) })
   s.volume.setData(
-    d.bars.map((b) => ({
-      time: shift(b.t),
+    d.bars.map((b, i) => ({
+      time: times[i] as UTCTimestamp,
       value: b.v,
       color: alpha(b.c >= b.o ? c.up : c.down, 0.35),
     })),
@@ -115,7 +115,7 @@ export function PriceChart({ symbol, currency }: { symbol: string; currency?: st
   const [error, setError] = useState(false)
   const [legend, setLegend] = useState<Legend>(null)
   const [change, setChange] = useState<number | null>(null)
-  const [meta, setMeta] = useState<{ intraday: boolean; gmtoffset: number; empty: boolean } | null>(null)
+  const [meta, setMeta] = useState<{ intraday: boolean; empty: boolean } | null>(null)
 
   const box = useRef<HTMLDivElement>(null)
   const chart = useRef<IChartApi | null>(null)
@@ -123,9 +123,11 @@ export function PriceChart({ symbol, currency }: { symbol: string; currency?: st
   const line = useRef<ISeriesApi<'Area'> | null>(null)
   const volume = useRef<ISeriesApi<'Histogram'> | null>(null)
   const data = useRef<ChartData | null>(null)
+  const times = useRef<number[]>([])
   const paint = (d: ChartData) => {
     if (!candles.current || !line.current || !volume.current) return
-    setChange(paintSeries({ candles: candles.current, line: line.current, volume: volume.current }, d))
+    times.current = chartTimes(d.bars, d.gmtoffset, INTRADAY.has(d.interval))
+    setChange(paintSeries({ candles: candles.current, line: line.current, volume: volume.current }, d, times.current))
   }
   const olderBusy = useRef(false)
   const req = useRef(0)
@@ -160,9 +162,9 @@ export function PriceChart({ symbol, currency }: { symbol: string; currency?: st
     const onMove = (p: MouseEventParams<Time>) => {
       const d = data.current
       const t = p.time as number | undefined
-      if (!d || t == null) return setLegend(lastLegend(d))
-      const bar = findBar(d.bars, t - d.gmtoffset)
-      setLegend(bar ? toLegend(bar) : lastLegend(d))
+      if (!d || t == null) return setLegend(lastLegend(d, times.current))
+      const i = indexAt(times.current, t)
+      setLegend(i >= 0 ? toLegend(d.bars[i], t) : lastLegend(d, times.current))
     }
     api.subscribeCrosshairMove(onMove)
 
@@ -208,8 +210,8 @@ export function PriceChart({ symbol, currency }: { symbol: string; currency?: st
         })
         paint(d)
         chart.current.timeScale().fitContent()
-        setLegend(lastLegend(d))
-        setMeta({ intraday: INTRADAY.has(d.interval), gmtoffset: d.gmtoffset, empty: d.bars.length === 0 })
+        setLegend(lastLegend(d, times.current))
+        setMeta({ intraday: INTRADAY.has(d.interval), empty: d.bars.length === 0 })
         setLoading(false)
       },
       () => {
@@ -265,7 +267,7 @@ export function PriceChart({ symbol, currency }: { symbol: string; currency?: st
         <span className="legend-text num">
           {legend ? (
             <>
-              <span className="muted">{fmtTime(intraday).format(new Date((Number(legend.time) + (meta?.gmtoffset ?? 0)) * 1000))}</span>{' '}
+              <span className="muted">{fmtTime(intraday).format(new Date(legend.time * 1000))}</span>{' '}
               {kind === 'candle' ? (
                 <>
                   {t('detail.ohlc', {
@@ -317,19 +319,8 @@ export function PriceChart({ symbol, currency }: { symbol: string; currency?: st
   )
 }
 
-function findBar(bars: Bar[], t: number): Bar | undefined {
-  let lo = 0
-  let hi = bars.length - 1
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1
-    if (bars[mid].t === t) return bars[mid]
-    if (bars[mid].t < t) lo = mid + 1
-    else hi = mid - 1
-  }
-  return undefined
-}
-const toLegend = (b: Bar): Legend => ({ time: String(b.t), o: b.o, h: b.h, l: b.l, c: b.c, v: b.v })
-const lastLegend = (d: ChartData | null): Legend => {
-  const b = d?.bars[d.bars.length - 1]
-  return b ? toLegend(b) : null
+const toLegend = (b: Bar, time: number): Legend => ({ time, o: b.o, h: b.h, l: b.l, c: b.c, v: b.v })
+const lastLegend = (d: ChartData | null, times: number[]): Legend => {
+  const n = d ? d.bars.length - 1 : -1
+  return d && n >= 0 && times.length === d.bars.length ? toLegend(d.bars[n], times[n]) : null
 }

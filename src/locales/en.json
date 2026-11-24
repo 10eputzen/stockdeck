@@ -403,7 +403,7 @@
     "chartCandles": "Candles",
     "chartUnavailable": "Price chart currently unavailable.",
     "chartNoData": "No price data for this period.",
-    "chartAttribution": "Price data from Yahoo, times in New York local time. Chart:",
+    "chartAttribution": "Price data from Yahoo, intraday times in your local time zone. Chart:",
     "earningsLabel": "Earnings",
     "earningsEpsEstimate": "Est. EPS {{value}}",
     "earningsRevenueEstimate": "Revenue ${{value}}",

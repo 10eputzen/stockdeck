@@ -403,7 +403,7 @@
     "chartCandles": "Kerzen",
     "chartUnavailable": "Kursverlauf gerade nicht verfügbar.",
     "chartNoData": "Keine Kursdaten für diesen Zeitraum.",
-    "chartAttribution": "Kursdaten von Yahoo, Zeiten in New Yorker Ortszeit. Chart:",
+    "chartAttribution": "Kursdaten von Yahoo, Intraday-Zeiten in deiner Ortszeit. Chart:",
     "earningsLabel": "Quartalszahlen",
     "earningsEpsEstimate": "Erwartung EPS {{value}}",
     "earningsRevenueEstimate": "Umsatz {{value}} $",
