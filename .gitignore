@@ -38,3 +38,6 @@ stockdeck-export/
 account_transactions.*
 all_events.json
 .pytr/
+
+# Local Claude Code settings
+.claude/
